@@ -55,7 +55,28 @@ Siempre se recuerda confirmar el depósito en la banca. Un comprobante en el cha
 
 ### Reportar
 
-El formulario pide número, tipo (comprobante falso, número reciclado, pidió devolución, otro) y una descripción breve. Ese reporte entra en la consulta. Hay un límite de 10 reportes por hora por conexión. La IP no se guarda en claro: solo un hash con sal. La nota de privacidad está en el formulario.
+El formulario pide número, tipo (comprobante falso, número reciclado, pidió devolución, otro) y una descripción breve. Ese reporte entra en la consulta. La nota de privacidad está en el formulario.
+
+### Límites de uso
+
+Todos responden `429` con un mensaje y la cabecera `Retry-After`. Los intentos rechazados no alargan la espera.
+
+| Qué se limita | Por defecto | Variable para ajustarlo |
+| --- | --- | --- |
+| Reportes por conexión | 10 por hora | `LIMITE_REPORTES_POR_HORA` |
+| Reportes sobre un mismo número, desde cualquier conexión | 5 por día | `LIMITE_REPORTES_POR_NUMERO_DIA` |
+| Consultas por conexión (`/api/consultar`) | 120 por hora | `LIMITE_CONSULTAS_POR_HORA` |
+| Análisis de comprobantes por conexión (`/api/analizar`) | 20 por hora | `LIMITE_ANALISIS_POR_HORA` |
+
+El tope por número evita que alguien inunde de reportes a un mismo celular rotando de red. Si muchas personas comparten una misma red (una demo en un evento), subí los topes por conexión.
+
+### Privacidad y retención
+
+- **El teléfono no se guarda.** La base guarda un HMAC-SHA256 del número con una clave secreta (`TELEFONO_PEPPER`). La consulta calcula el mismo hash y busca por él. Un hash sin esa clave se podría revertir probando los 100 millones de números posibles en segundos, por eso la clave es obligatoria en producción y no debe vivir en el repo.
+- **La IP no se guarda en el reporte.** Para el límite se anota un hash de la IP, que se borra al terminar la ventana.
+- **Los reportes se borran a los 6 meses** (180 días). Los de demostración no. El borrado corre cuando la app se usa (como mucho una vez por hora por instancia), porque Vercel no tiene tareas programadas por defecto.
+- **Bases anteriores:** al abrirse con esta versión, la app calcula los hashes de los teléfonos que ya estaban en claro, vacía la columna vieja y borra los hash de IP de los reportes. Corre una sola vez. En SQLite local además compacta el archivo para que los números viejos no queden en páginas libres.
+- Como el borrado deja fuera lo de más de 180 días, los dos últimos escalones de recencia del puntaje (hasta un año, y más viejo) solo se aplican a los reportes de demostración.
 
 ## Cómo correrlo
 
@@ -74,6 +95,8 @@ npm run lint
 npm run build
 npm start
 ```
+
+`npm start` y cualquier despliegue corren en modo producción, y ahí `TELEFONO_PEPPER` es obligatoria (ponela en `.env.local` o en el entorno). `npm run dev` usa una clave de prueba.
 
 `npm run ejemplos` regenera las tres capturas ficticias de `public/ejemplos/`.
 
@@ -136,6 +159,7 @@ La primera vez que la app habla con Turso crea las tablas y carga la semilla fic
 | --- | --- | --- |
 | `TURSO_DATABASE_URL` | Para que los reportes persistan | La URL `libsql://` o `https://` del paso 1 |
 | `TURSO_AUTH_TOKEN` | Junto con la URL | El token del paso 1 |
+| `TELEFONO_PEPPER` | **Obligatoria** | Clave secreta para el hash de los teléfonos. Generala con `openssl rand -hex 32` y no la cambies después |
 | `RATE_LIMIT_SALT` | Recomendada | Una frase larga, distinta de la del ejemplo |
 | `VISION_API_KEY` | No | Solo si querés el modelo de visión |
 | `VISION_API_BASE_URL` | No | Por defecto `https://api.openai.com/v1` |
@@ -160,8 +184,10 @@ En local no hace falta ninguna de esas variables: `npm install && npm run dev` s
 - Verde no significa «es seguro». Significa que esta lista no tiene alertas suficientes. Un número nuevo, o uno que nadie marcó, sale verde.
 - El OCR se equivoca con capturas borrosas, recortes o tipografías raras. Por eso una lectura vacía no se presenta como luz verde.
 - Las reglas de referencia y de formato son heurísticas, no el formato oficial de cada banco. Pueden marcar un comprobante real raro, o dejar pasar uno editado con cuidado.
-- El límite por IP es básico. No frena a quien rota de red, y detrás de un proxy hay que mirar `X-Forwarded-For` con cuidado.
-- No hay cuentas de usuario ni moderación humana. Alguien puede ensuciar un número con reportes falsos, hasta topar el límite.
+- El límite por IP no frena a quien rota de red: por eso existe también el tope por número, que acota el daño. La IP sale de las cabeceras de la plataforma (en Vercel el visitante no las puede fijar). Detrás de un proxy propio, asegurate de que sobrescriba `X-Real-IP` y `X-Forwarded-For`, o el límite se puede esquivar escribiendo esas cabeceras.
+- Sin Turso en Vercel, los contadores de límite viven en la memoria de cada instancia y no se comparten entre ellas.
+- No hay cuentas de usuario ni moderación humana. Alguien puede ensuciar un número con reportes falsos: hasta 5 por día por número y 10 por hora por conexión.
+- Al migrar una base de Turso que ya tenía teléfonos en claro, los valores viejos pueden seguir en los respaldos del proveedor. Si hay datos reales, valorá crear una base nueva en vez de migrar.
 - La descripción del reporte se guarda, pero no se muestra en la consulta. Igual no escribas cédulas ni cuentas.
 
 ## Guion de demo (2 a 3 minutos)

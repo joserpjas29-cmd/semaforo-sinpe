@@ -1,4 +1,7 @@
 import { analizarImagen } from "@/lib/analizar-imagen";
+import { hashIp, ipDesdeRequest } from "@/lib/db";
+import { esperaLegible, reglaLimite } from "@/lib/limite";
+import { limitar, respuestaLimite } from "@/lib/limitador";
 import { precalentarOcr } from "@/lib/ocr";
 import { visionConfigurada } from "@/lib/vision";
 
@@ -31,6 +34,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  // Este endpoint es el caro (OCR y, si hay llave, la API de visión): se limita antes de leer la imagen.
+  const limite = await limitar(reglaLimite("analizar_ip"), hashIp(ipDesdeRequest(request)));
+  if (!limite.permitido) {
+    return respuestaLimite(
+      `Ya analizaste varios comprobantes seguidos desde esta conexión. Esperá ${esperaLegible(limite.reintentarEnSeg)} y probá de nuevo.`,
+      limite.reintentarEnSeg,
+    );
+  }
+
   let formulario: FormData;
   try {
     formulario = await request.formData();

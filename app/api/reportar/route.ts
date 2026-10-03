@@ -1,4 +1,5 @@
 import { crearReporte, hashIp, ipDesdeRequest } from "@/lib/db";
+import { respuestaLimite } from "@/lib/limitador";
 import { esTipoReporte } from "@/lib/tipos";
 
 export const runtime = "nodejs";
@@ -24,7 +25,8 @@ export async function POST(request: Request) {
   });
 
   if (!resultado.ok) {
-    return Response.json({ error: resultado.error }, { status: resultado.codigo === "limite" ? 429 : 400 });
+    if (resultado.codigo === "limite") return respuestaLimite(resultado.error, resultado.reintentarEnSeg);
+    return Response.json({ error: resultado.error }, { status: 400 });
   }
 
   return Response.json(resultado);

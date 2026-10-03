@@ -1,7 +1,9 @@
-import { corteLimites, obtenerAlmacen, type FilaReporte, type ModoAlmacen } from "./almacen";
+import { obtenerAlmacen, purgarSiToca, type FilaReporte, type ModoAlmacen } from "./almacen";
 import { esNumeroDemo } from "./ejemplos";
+import { esperaLegible, reglaLimite } from "./limite";
+import { limitar } from "./limitador";
+import { hashIp, hashTelefono } from "./privacidad";
 import { formatearTelefono, normalizarTelefono, pareceCelular } from "./telefono";
-import { contarEnVentana, excedeLimite, LIMITE_REPORTES, VENTANA_MS } from "./limite";
 import { puntuarNumero } from "./semaforo";
 import {
   ETIQUETA_TIPO,
@@ -12,7 +14,8 @@ import {
   type ResultadoNumero,
   type TipoReporte,
 } from "./tipos";
-import { createHash } from "node:crypto";
+
+export { hashIp };
 
 export interface ConsultaNumero extends ResultadoNumero {
   telefono: string;
@@ -31,15 +34,12 @@ export interface Estadisticas {
   persistencia: ModoAlmacen;
 }
 
-export function hashIp(ip: string): string {
-  const sal = process.env.RATE_LIMIT_SALT || "semaforo-sinpe-dev";
-  return createHash("sha256").update(`${sal}:${ip}`).digest("hex");
-}
-
 export async function consultarNumero(telefono: string, ahora = new Date()): Promise<ConsultaNumero | null> {
   const normalizado = normalizarTelefono(telefono);
   if (!normalizado) return null;
-  const filas = await (await obtenerAlmacen()).reportesDe(normalizado);
+  const almacen = await obtenerAlmacen();
+  await purgarSiToca(almacen, ahora);
+  const filas = await almacen.reportesDe(hashTelefono(normalizado));
 
   const reportes = filas
     .filter((fila): fila is FilaReporte & { tipo: TipoReporte } => esTipoReporte(fila.tipo))
@@ -61,6 +61,7 @@ export async function consultarNumero(telefono: string, ahora = new Date()): Pro
 
 export async function obtenerEstadisticas(ahora = new Date()): Promise<Estadisticas> {
   const almacen = await obtenerAlmacen();
+  await purgarSiToca(almacen, ahora);
   const desde7 = new Date(ahora.getTime() - 7 * 86_400_000).toISOString();
   const conteos = await almacen.conteos(desde7);
   const porTipo = Object.fromEntries(TIPOS_REPORTE.map((tipo) => [tipo, 0])) as Record<TipoReporte, number>;
@@ -87,7 +88,8 @@ export interface ReporteNuevo {
 
 export type ResultadoReporte =
   | { ok: true; id: number; telefono: string }
-  | { ok: false; error: string; codigo: "limite" | "datos" };
+  | { ok: false; error: string; codigo: "datos" }
+  | { ok: false; error: string; codigo: "limite"; reintentarEnSeg: number };
 
 export async function crearReporte(entrada: ReporteNuevo): Promise<ResultadoReporte> {
   const telefono = normalizarTelefono(entrada.telefono);
@@ -108,36 +110,62 @@ export async function crearReporte(entrada: ReporteNuevo): Promise<ResultadoRepo
   }
 
   const ahora = entrada.ahora ?? new Date();
-  const almacen = await obtenerAlmacen();
-  const marcas = await almacen.marcasDesde(entrada.ipHash, new Date(ahora.getTime() - VENTANA_MS).toISOString());
-  if (excedeLimite(contarEnVentana(marcas, ahora))) {
+  const telefonoHash = hashTelefono(telefono);
+
+  const reglaIp = reglaLimite("reportar_ip");
+  const porConexion = await limitar(reglaIp, entrada.ipHash, ahora);
+  if (!porConexion.permitido) {
     return {
       ok: false,
       codigo: "limite",
-      error: `Ya mandaste ${LIMITE_REPORTES} reportes en la última hora desde esta conexión. Esperá un rato: el límite existe para frenar abusos.`,
+      reintentarEnSeg: porConexion.reintentarEnSeg,
+      error: `Ya mandaste ${reglaIp.maximo} reportes en la última hora desde esta conexión. Esperá ${esperaLegible(porConexion.reintentarEnSeg)}: el límite existe para frenar abusos.`,
     };
   }
 
-  const creadoEn = ahora.toISOString();
+  // Tope por número: aunque alguien rote de conexión, un mismo número no se puede inundar de reportes.
+  const reglaNumero = reglaLimite("reportar_numero");
+  const porNumero = await limitar(reglaNumero, telefonoHash, ahora);
+  if (!porNumero.permitido) {
+    return {
+      ok: false,
+      codigo: "limite",
+      reintentarEnSeg: porNumero.reintentarEnSeg,
+      error: `Este número ya recibió ${reglaNumero.maximo} reportes en las últimas 24 horas y todos cuentan en el semáforo. Si es un caso distinto, probá de nuevo en ${esperaLegible(porNumero.reintentarEnSeg)}.`,
+    };
+  }
+
+  const almacen = await obtenerAlmacen();
+  await purgarSiToca(almacen, ahora);
   const id = await almacen.guardar({
-    telefono,
+    telefonoHash,
     tipo: entrada.tipo,
     descripcion,
-    creadoEn,
-    ipHash: entrada.ipHash,
-    borrarLimitesAntesDe: corteLimites(ahora),
+    creadoEn: ahora.toISOString(),
   });
   return { ok: true, id, telefono };
 }
 
+const FORMATO_IP = /^[0-9a-fA-F:.]{2,45}$/;
+
+/**
+ * IP del visitante. Se prefieren las cabeceras que pone la plataforma (en Vercel el cliente
+ * no las puede fijar). Si solo hay X-Forwarded-For se toma el último valor, el que agregó el
+ * proxy más cercano, y no el primero, que el visitante puede escribir a su gusto.
+ * Detrás de un proxy propio, asegurate de que sobrescriba estas cabeceras.
+ */
 export function ipDesdeRequest(request: Request): string {
-  const reenviada = request.headers.get("x-forwarded-for");
-  if (reenviada) {
-    const primera = reenviada.split(",")[0]?.trim();
-    if (primera) return primera.slice(0, 80);
+  const cabeceras = request.headers;
+  const reenviada = cabeceras.get("x-forwarded-for")?.split(",");
+  const candidatas = [
+    cabeceras.get("x-vercel-forwarded-for")?.split(",")[0],
+    cabeceras.get("x-real-ip"),
+    reenviada?.[reenviada.length - 1],
+  ];
+  for (const candidata of candidatas) {
+    const ip = candidata?.trim();
+    if (ip && FORMATO_IP.test(ip)) return ip;
   }
-  const real = request.headers.get("x-real-ip")?.trim();
-  if (real) return real.slice(0, 80);
   return "local";
 }
 
