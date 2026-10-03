@@ -1,6 +1,6 @@
 # Semáforo SINPE
 
-Herramienta web para frenar estafas con SINPE Móvil en Costa Rica: números reciclados y comprobantes falsos. El semáforo no mueve plata y no entra a tu banca. Sirve para mirar dos veces antes de soltar la plata o de dar un producto por pagado.
+Herramienta web para frenar estafas con SINPE Móvil en Costa Rica: números reciclados y comprobantes falsos. El semáforo no realiza transacciones ni accede a su cuenta de banco. Sirve para mirar dos veces antes de soltar la plata o de dar un producto por pagado.
 
 No está afiliada a ningún banco ni al Banco Central de Costa Rica. No usa logos ni marcas oficiales.
 

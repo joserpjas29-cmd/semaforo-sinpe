@@ -88,7 +88,7 @@ export function Pie() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-4 py-8 text-sm leading-relaxed text-muted-foreground">
         <p>
           Semáforo SINPE no está afiliado a ningún banco ni al Banco Central de Costa Rica. No usa
-          marcas ni logos oficiales. No mueve plata y no entra a tu banca.
+          marcas ni logos oficiales. No realiza transacciones ni accede a su cuenta de banco.
         </p>
         <p>
           Los números y comprobantes de ejemplo son ficticios, armados para la demo. Un semáforo
