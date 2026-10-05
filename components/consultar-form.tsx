@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NUMEROS_DEMO } from "@/lib/ejemplos";
+import { interpretarRespuesta } from "@/lib/mensaje-limite";
 import { formatearTelefono, normalizarTelefono } from "@/lib/telefono";
 import { ETIQUETA_TIPO, RECORDATORIO_ENVIO, TIPOS_REPORTE, type ResultadoNumero } from "@/lib/tipos";
 
@@ -44,12 +45,12 @@ export function ConsultarForm({ numeroInicial = "" }: { numeroInicial?: string }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ telefono: valor }),
       });
-      const datos = (await respuesta.json()) as Consulta & { error?: string };
-      if (!respuesta.ok) {
-        setError(datos.error || "No se pudo consultar.");
+      const leido = await interpretarRespuesta<Consulta>(respuesta, "No se pudo consultar.");
+      if (!leido.ok) {
+        setError(leido.error);
         return;
       }
-      setResultado(datos);
+      setResultado(leido.datos);
     } catch {
       setError("No hay conexión con la herramienta. Probá de nuevo.");
     } finally {

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { interpretarRespuesta } from "@/lib/mensaje-limite";
 import { formatearTelefono } from "@/lib/telefono";
 import { ETIQUETA_TIPO, TIPOS_REPORTE, type TipoReporte } from "@/lib/tipos";
 
@@ -38,12 +39,16 @@ export function ReportarForm({ numeroInicial = "" }: { numeroInicial?: string })
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ telefono, tipo, descripcion }),
       });
-      const datos = (await respuesta.json()) as { error?: string; telefono?: string };
-      if (!respuesta.ok || !datos.telefono) {
-        setError(datos.error || "No se pudo guardar el reporte.");
+      const leido = await interpretarRespuesta<{ telefono?: string }>(respuesta, "No se pudo guardar el reporte.");
+      if (!leido.ok) {
+        setError(leido.error);
         return;
       }
-      setExito(datos.telefono);
+      if (!leido.datos.telefono) {
+        setError("No se pudo guardar el reporte.");
+        return;
+      }
+      setExito(leido.datos.telefono);
     } catch {
       setError("No hay conexión con la herramienta. Probá de nuevo.");
     } finally {
