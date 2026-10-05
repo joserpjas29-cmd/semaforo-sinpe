@@ -137,7 +137,7 @@ function explicacion(color: ColorSemaforo, total: number): string {
     return "Este número no tiene reportes en la lista colectiva. Eso no prueba que sea de confianza: puede ser nuevo, o simplemente nadie lo ha marcado.";
   }
   if (color === "verde") {
-    return "Los reportes que hay son viejos o de poca gravedad. No alcanzan para encender una alerta. Igual verificá el nombre en tu banca.";
+    return "Los reportes que hay son viejos o de poca gravedad. No alcanzan para encender una alerta. Igual verificá el nombre en tu banco.";
   }
   if (color === "amarillo") {
     return "Hay señales para ir con cuidado. No envíes plata si el nombre del beneficiario no te cierra, y desconfiá si te apuran.";

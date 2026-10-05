@@ -109,7 +109,7 @@ export function ComprobanteForm() {
         </p>
       </header>
 
-      <Recordatorio texto={RECORDATORIO_RECIBO} titulo="Confirmá el depósito en tu banca" />
+      <Recordatorio texto={RECORDATORIO_RECIBO} titulo="Confirmá el depósito en tu banco" />
 
       <form className="space-y-5" onSubmit={(evento) => void analizar(evento)}>
         <fieldset className="space-y-2">
@@ -203,7 +203,7 @@ export function ComprobanteForm() {
       {resultado && datos && (
         <section className="space-y-5 rounded-3xl bg-card p-5 ring-1 ring-foreground/10" aria-label="Resultado del comprobante">
           <Semaforo color={resultado.color} titulo={resultado.titulo} detalle={resultado.explicacion} />
-          <Recordatorio texto={resultado.recordatorio} titulo="Confirmá el depósito en tu banca" />
+          <Recordatorio texto={resultado.recordatorio} titulo="Confirmá el depósito en tu banco" />
 
           <div>
             <h3 className="text-sm font-semibold">Lo que se pudo leer</h3>
@@ -246,7 +246,7 @@ export function ComprobanteForm() {
             </h3>
             {resultado.senales.length === 0 ? (
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Eso no alcanza para entregar el producto. El depósito se confirma en tu banca, no en el chat.
+                Eso no alcanza para entregar el producto. El depósito se confirma en tu banco, no en el chat.
               </p>
             ) : (
               <ul className="mt-2 space-y-2">

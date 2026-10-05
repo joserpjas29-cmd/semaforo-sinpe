@@ -8,7 +8,7 @@ No está afiliada a ningún banco ni al Banco Central de Costa Rica. No usa logo
 
 SINPE Móvil es instantáneo. También lo es la estafa. Dos patrones se repiten:
 
-1. **Antes de enviar.** El número era de otra persona (un chip reciclado) o ya lo reportaron por pedir devoluciones y mandar comprobantes que no cuadran. La banca muestra el nombre del beneficiario, pero en el apuro mucha gente no lo lee.
+1. **Antes de enviar.** El número era de otra persona (un chip reciclado) o ya lo reportaron por pedir devoluciones y mandar comprobantes que no cuadran. El banco muestra el nombre del beneficiario, pero en el apuro mucha gente no lo lee.
 2. **Al recibir.** El cliente manda una captura. La plata no está en la cuenta. El mensaje dice «me equivoqué, devuélvame ya». Si devolvés, estás regalando plata de tu bolsillo.
 
 Semáforo SINPE junta reportes de la gente para el primer caso y lee la captura en la misma máquina para el segundo.
@@ -34,7 +34,7 @@ La recencia multiplica: últimos 7 días ×1, hasta 30 días ×0,75, hasta 90 ×
 
 Dos reglas suben el color aunque el puntaje no llegue: un reporte grave de los últimos 14 días deja el semáforo al menos en amarillo, y dos reportes graves en 30 días (comprobante falso o número reciclado) lo ponen en rojo.
 
-En la consulta se ven cantidades y tipos, no el texto libre. Siempre se recuerda verificar el nombre que muestra la banca antes de confirmar.
+En la consulta se ven cantidades y tipos, no el texto libre. Siempre se recuerda verificar el nombre que muestra el banco antes de confirmar.
 
 ### Analizar un comprobante
 
@@ -51,7 +51,7 @@ Una señal alta enciende el rojo. Una señal media, el amarillo. Si no se lee na
 
 Si existe `VISION_API_KEY`, primero se intenta un modelo de visión compatible con la API de chat de OpenAI. Si falla o no está la variable, se usa el OCR. La app no se rompe sin la llave.
 
-Siempre se recuerda confirmar el depósito en la banca. Un comprobante en el chat no es plata en la cuenta.
+Siempre se recuerda confirmar el depósito en el banco. Un comprobante en el chat no es plata en la cuenta.
 
 ### Reportar
 
@@ -193,9 +193,9 @@ También se puede instalar Vercel desde la pestaña Apps del repo en Origin. Cad
 ## Guion de demo (2 a 3 minutos)
 
 1. **El problema (20 s).** Abrí el inicio. SINPE es inmediato, y la estafa también: chip reciclado al enviar, comprobante falso al recibir, y el «devolveme la plata». Esta herramienta no es el banco.
-2. **Consultar en rojo (25 s).** Entrá a Consultar y tocá `6060 3030`. Mostrá el rojo, los tipos de reporte y el índice. Leé en voz alta el recordatorio: hay que verificar el nombre que muestra la banca antes de confirmar.
+2. **Consultar en rojo (25 s).** Entrá a Consultar y tocá `6060 3030`. Mostrá el rojo, los tipos de reporte y el índice. Leé en voz alta el recordatorio: hay que verificar el nombre que muestra el banco antes de confirmar.
 3. **El verde no es un permiso (20 s).** Consultá `8881 0001` o `5111 9090`. Explicá que verde es «sin alertas en la lista», no «mandá la plata».
-4. **Comprobante que se ve bien (25 s).** En Comprobante, elegí «Se ve consistente» y analizá. Sale verde, con monto, fecha y referencia. Volvé al recordatorio: igual hay que ver el depósito en la banca.
+4. **Comprobante que se ve bien (25 s).** En Comprobante, elegí «Se ve consistente» y analizá. Sale verde, con monto, fecha y referencia. Volvé al recordatorio: igual hay que ver el depósito en el banco.
 5. **La captura mentirosa (30 s).** Elegí «Varias señales raras». Mostrá la fecha imposible, la hora 25:99, los dos montos, los dos bancos y la referencia corta. El semáforo queda en rojo.
 6. **El guion del chat (20 s).** Volvé al comprobante consistente, pegá «Guion de estafa» y analizá de nuevo. La imagen sola era verde; el mensaje la pone en rojo.
-7. **Cerrar el círculo (20 s).** Reportá un número inventado, por ejemplo `7000 1111`, tipo «comprobante falso», con una frase. Consultalo: ya no sale limpio. Cerrá con las limitaciones: datos ficticios, OCR local, sin API key, y el semáforo no reemplaza a la banca.
+7. **Cerrar el círculo (20 s).** Reportá un número inventado, por ejemplo `7000 1111`, tipo «comprobante falso», con una frase. Consultalo: ya no sale limpio. Cerrá con las limitaciones: datos ficticios, OCR local, sin API key, y el semáforo no reemplaza al banco.

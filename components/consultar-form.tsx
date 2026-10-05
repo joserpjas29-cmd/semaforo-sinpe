@@ -69,7 +69,7 @@ export function ConsultarForm({ numeroInicial = "" }: { numeroInicial?: string }
         </p>
       </header>
 
-      <Recordatorio texto={RECORDATORIO_ENVIO} titulo="Verificá el nombre en tu banca" />
+      <Recordatorio texto={RECORDATORIO_ENVIO} titulo="Verificá el nombre en tu banco" />
 
       <form
         className="space-y-4"
@@ -147,7 +147,7 @@ export function ConsultarForm({ numeroInicial = "" }: { numeroInicial?: string }
               Este número no parece celular. SINPE Móvil suele usar un número que empieza con 5, 6, 7 u 8.
             </p>
           )}
-          <Recordatorio texto={resultado.recordatorio} titulo="Verificá el nombre en tu banca" />
+          <Recordatorio texto={resultado.recordatorio} titulo="Verificá el nombre en tu banco" />
           {resultado.conteo.total > 0 && (
             <div>
               <h3 className="text-sm font-semibold">Qué hay en la lista</h3>

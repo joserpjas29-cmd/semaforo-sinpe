@@ -41,7 +41,7 @@ const TITULO: Record<ColorSemaforo, string> = {
 
 const EXPLICACION: Record<ColorSemaforo, string> = {
   verde:
-    "No vimos señales de alarma en lo que se pudo leer. Igual confirmá el depósito en tu banca: el semáforo no ve tu cuenta.",
+    "No vimos señales de alarma en lo que se pudo leer. Igual confirmá el depósito en tu banco: el semáforo no ve tu cuenta.",
   amarillo:
     "Hay algo que no cierra del todo. No entregues el producto ni devuelvas plata hasta ver el movimiento en tu banco.",
   rojo:
@@ -280,7 +280,7 @@ const GUIONES: { id: string; titulo: string; detalle: string; patron: RegExp }[]
     id: "guion_devolucion",
     titulo: "Pide que le devuelvas la plata",
     detalle:
-      "Te están pidiendo una devolución, un reintegro o el vuelto. Si el depósito no está en tu banca, devolver es regalar plata.",
+      "Te están pidiendo una devolución, un reintegro o el vuelto. Si el depósito no está en tu banco, devolver es regalar plata.",
     patron:
       /\b(devolveme|devolvemelo|devuelvame|devuelvamelo|devuelva|devolver|devolve|devolucion|reintegro|reembolso|el vuelto|depositeme)\b/,
   },
@@ -506,7 +506,7 @@ export function analizarComprobante(
       severidad: "media",
       titulo: "No se pudo leer el comprobante",
       detalle:
-        "No encontramos monto, fecha ni referencia. Esto no es una luz verde: subí una captura más nítida o confirmá el depósito en tu banca.",
+        "No encontramos monto, fecha ni referencia. Esto no es una luz verde: subí una captura más nítida o confirmá el depósito en tu banco.",
     });
   } else if (!evidencia && senales.length === 0) {
     senales.push({
