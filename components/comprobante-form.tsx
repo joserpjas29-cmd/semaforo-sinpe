@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { FuenteLectura } from "@/lib/analizar-imagen";
 import { COMPROBANTES_DEMO, MENSAJES_DEMO } from "@/lib/ejemplos";
+import { interpretarRespuesta } from "@/lib/mensaje-limite";
 import { formatearColones } from "@/lib/formato";
 import { RECORDATORIO_RECIBO, type ResultadoComprobante, type Severidad } from "@/lib/tipos";
 
@@ -81,12 +82,12 @@ export function ComprobanteForm() {
       formulario.set("imagen", archivo);
       formulario.set("mensaje", mensaje);
       const respuesta = await fetch("/api/analizar", { method: "POST", body: formulario });
-      const datos = (await respuesta.json()) as Analisis & { error?: string };
-      if (!respuesta.ok) {
-        setError(datos.error || "No se pudo analizar.");
+      const leido = await interpretarRespuesta<Analisis>(respuesta, "No se pudo analizar.");
+      if (!leido.ok) {
+        setError(leido.error);
         return;
       }
-      setResultado(datos);
+      setResultado(leido.datos);
     } catch {
       setError("No hay conexión con la herramienta. Probá de nuevo.");
     } finally {
