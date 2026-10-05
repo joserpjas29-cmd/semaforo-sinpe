@@ -28,32 +28,66 @@ export interface EjemploSms {
   veredicto: VeredictoSms;
 }
 
+/** Textos ficticios para la demo. No son SMS reales ni datos de un cliente. */
 export const EJEMPLOS_SMS: EjemploSms[] = [
   {
-    id: "normal",
-    etiqueta: "Se ve normal",
+    id: "verde-bn",
+    etiqueta: "Verde · Banco Nacional",
     veredicto: "se_ve_normal",
     texto: `BNCR: SINPE Movil recibido
+Banco Nacional
 De: MARIA SOLIS QUIROS
+Celular: 8881-2040
 Monto: CRC 15.000,00
 Fecha: 02/10/2026 14:32
 Referencia: 4829173650`,
   },
   {
-    id: "sospechoso",
-    etiqueta: "Sospechoso",
+    id: "verde-bcr",
+    etiqueta: "Verde · BCR",
+    veredicto: "se_ve_normal",
+    texto: `BCR: SINPE Movil recibido
+Banco de Costa Rica
+De: LUIS MORA JIMENEZ
+Celular: 7071-8833
+Monto: CRC 32.500,00
+Fecha: 04/10/2026 09:18
+Referencia: 7103948261`,
+  },
+  {
+    id: "amarillo-bn",
+    etiqueta: "Amarillo · Banco Nacional",
+    veredicto: "poco_claro",
+    texto: `Banco Nacional
+Recibiste una transferencia.
+Gracias por preferirnos.`,
+  },
+  {
+    id: "amarillo-bac",
+    etiqueta: "Amarillo · BAC",
+    veredicto: "poco_claro",
+    texto: `BAC: aviso
+Se registró un SINPE o algo parecido.
+El texto no trae el detalle.
+Quedamos atentos.`,
+  },
+  {
+    id: "rojo-bn",
+    etiqueta: "Rojo · Banco Nacional",
     veredicto: "sospechoso",
     texto: `BANCO NACIONL: Su cuenta sera bloqueada.
 Confirme su SINPEE de inmediato en http://bncr-seguro.xyz/login
 Remitente: BNCR-ALERTA`,
   },
   {
-    id: "poco-claro",
-    etiqueta: "No está claro",
-    veredicto: "poco_claro",
-    texto: `Banco Nacional
-Recibiste una transferencia.
-Gracias por preferirnos.`,
+    id: "rojo-bac",
+    etiqueta: "Rojo · BAC",
+    veredicto: "sospechoso",
+    texto: `BAC: URGENTE desde Estados Unidos
+Su cuenta sera bloqueada.
+Digite su PIN de inmediato en https://bit.ly/bac-clave
+Llame al +1 305 555 0148
+Remitente: BAC-ALERTA`,
   },
 ];
 
