@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Recordatorio } from "@/components/recordatorio";
 import { Semaforo } from "@/components/semaforo";
@@ -106,6 +107,11 @@ export function ComprobanteForm() {
           Subí la captura que te mandó el cliente y, si querés, pegá el mensaje. La lectura se hace en
           el servidor de esta herramienta. Sin una API key de visión, la imagen no se manda a un modelo
           externo.
+        </p>
+        <p className="text-sm leading-relaxed">
+          <Link href="/sms" className="font-medium text-primary underline-offset-4 hover:underline">
+            Si te llegó por SMS, revisá el mensaje
+          </Link>
         </p>
       </header>
 

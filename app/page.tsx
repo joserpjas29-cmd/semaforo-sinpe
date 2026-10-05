@@ -22,11 +22,16 @@ const PASOS = [
   },
   {
     numero: "02",
+    titulo: "Revisá el SMS",
+    texto: "Si te llega un mensaje tipo comprobante, pegálo. Buscamos enlaces raros, apuros y datos que faltan. El texto se queda en tu navegador.",
+  },
+  {
+    numero: "03",
     titulo: "Analizá el comprobante",
     texto: "Si te mandan la captura, la leemos en el servidor. Buscamos fecha imposible, referencia rara, montos que no cuadran y el guion de «devolveme la plata».",
   },
   {
-    numero: "03",
+    numero: "04",
     titulo: "Reportá si te pasó",
     texto: "Tu aviso entra en la lista que usa la consulta. No pedimos tu nombre. En público se ven cantidades y tipos, no el texto libre.",
   },
@@ -45,10 +50,10 @@ export default async function Inicio() {
           </h1>
           <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">
             SINPE Móvil es rapidísimo. También lo es la estafa: números reciclados, comprobantes
-            editados y el clásico «me equivoqué, devuélvame». Esta herramienta junta reportes de la
-            gente y lee la captura antes de que te confiés.
+            editados, SMS que no son del banco y el clásico «me equivoqué, devuélvame». Esta herramienta
+            junta reportes de la gente y revisa la captura o el mensaje antes de que te confiés.
           </p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Link
               href="/consultar"
               className="inline-flex h-12 items-center justify-center rounded-lg bg-primary px-5 text-base font-medium text-primary-foreground"
@@ -60,6 +65,12 @@ export default async function Inicio() {
               className="inline-flex h-12 items-center justify-center rounded-lg bg-card px-5 text-base font-medium ring-1 ring-foreground/15"
             >
               Analizar un comprobante
+            </Link>
+            <Link
+              href="/sms"
+              className="inline-flex h-12 items-center justify-center rounded-lg bg-card px-5 text-base font-medium ring-1 ring-foreground/15"
+            >
+              Revisar un SMS
             </Link>
           </div>
         </div>
@@ -92,7 +103,7 @@ export default async function Inicio() {
         <h2 id="titulo-pasos" className="font-heading text-2xl">
           Cómo funciona
         </h2>
-        <ol className="mt-4 grid gap-4 md:grid-cols-3">
+        <ol className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PASOS.map((paso) => (
             <li key={paso.numero} className="rounded-3xl bg-card p-5 ring-1 ring-foreground/10">
               <p className="font-heading text-sm text-primary">{paso.numero}</p>

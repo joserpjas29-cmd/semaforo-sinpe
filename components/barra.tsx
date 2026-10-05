@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const ENLACES = [
   { href: "/consultar", etiqueta: "Consultar" },
   { href: "/comprobante", etiqueta: "Comprobante" },
+  { href: "/sms", etiqueta: "SMS" },
   { href: "/reportar", etiqueta: "Reportar" },
 ];
 
@@ -58,7 +59,7 @@ export function Barra() {
         aria-label="Principal móvil"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card/95 backdrop-blur md:hidden"
       >
-        <ul className="grid grid-cols-3">
+        <ul className="grid grid-cols-4">
           {ENLACES.map((enlace) => {
             const activo = ruta === enlace.href;
             return (
@@ -67,7 +68,7 @@ export function Barra() {
                   href={enlace.href}
                   aria-current={activo ? "page" : undefined}
                   className={cn(
-                    "flex h-16 items-center justify-center text-sm font-medium",
+                    "flex h-16 items-center justify-center px-1 text-center text-xs leading-tight font-medium sm:text-sm",
                     activo ? "text-primary" : "text-muted-foreground",
                   )}
                 >
