@@ -95,9 +95,10 @@ export function ReportarForm({ numeroInicial = "" }: { numeroInicial?: string })
       <aside className="rounded-2xl bg-muted px-4 py-3 text-sm leading-relaxed text-muted-foreground">
         <p className="font-semibold text-foreground">Privacidad</p>
         <p className="mt-1">
-          Guardamos el número, el tipo, tu descripción y la hora. No te pedimos nombre. La dirección de
-          la conexión se guarda solo como un código irreversible, para frenar spam, y no se muestra. En
-          la consulta pública se ven cantidades y tipos, no el texto libre.
+          No guardamos el número en claro: solo un código HMAC irreversible, que no se puede volver a
+          leer. Guardamos el tipo, tu descripción y la hora. No te pedimos nombre, y el reporte no
+          guarda la dirección de tu conexión ni un código de ella. En la consulta pública se ven
+          cantidades y tipos, no el texto libre.
         </p>
       </aside>
 

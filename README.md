@@ -73,9 +73,9 @@ El tope por número evita que alguien inunde de reportes a un mismo celular rota
 ### Privacidad y retención
 
 - **El teléfono no se guarda.** La base guarda un HMAC-SHA256 del número con una clave secreta (`TELEFONO_PEPPER`). La consulta calcula el mismo hash y busca por él. Un hash sin esa clave se podría revertir probando los 100 millones de números posibles en segundos, por eso la clave es obligatoria en producción y no debe vivir en el repo.
-- **La IP no se guarda en el reporte.** Para el límite se anota un hash de la IP, que se borra al terminar la ventana.
+- **La IP no se guarda en el reporte.** Para el límite se anota un hash de la IP con `RATE_LIMIT_SALT`, y ese hash se borra al terminar la ventana. La sal es obligatoria en producción: si falta o es la del ejemplo, el hash usa un valor conocido.
 - **Los reportes se borran a los 6 meses** (180 días). Los de demostración no. El borrado corre cuando la app se usa (como mucho una vez por hora por instancia), porque Vercel no tiene tareas programadas por defecto.
-- **Bases anteriores:** al abrirse con esta versión, la app calcula los hashes de los teléfonos que ya estaban en claro, vacía la columna vieja y borra los hash de IP de los reportes. Corre una sola vez. En SQLite local además compacta el archivo para que los números viejos no queden en páginas libres.
+- **Bases anteriores:** al abrirse con esta versión, la app calcula los hashes de los teléfonos que ya estaban en claro, vacía la columna vieja y borra los hashes de IP de los reportes. Corre una sola vez. En SQLite local además compacta el archivo para que los números viejos no queden en páginas libres.
 - Como el borrado deja fuera lo de más de 180 días, los dos últimos escalones de recencia del puntaje (hasta un año, y más viejo) solo se aplican a los reportes de demostración.
 
 ## Cómo correrlo
@@ -96,7 +96,7 @@ npm run build
 npm start
 ```
 
-`npm start` y cualquier despliegue corren en modo producción, y ahí `TELEFONO_PEPPER` es obligatoria (ponela en `.env.local` o en el entorno). `npm run dev` usa una clave de prueba.
+`npm start` y cualquier despliegue corren en modo producción. Ahí `TELEFONO_PEPPER` y `RATE_LIMIT_SALT` son obligatorias (ponelas en `.env.local` o en el entorno, distintas del ejemplo). Sin `TELEFONO_PEPPER` las consultas y los reportes fallan con un error claro. Sin `RATE_LIMIT_SALT` propia el límite avisa y usa una sal conocida. `npm run dev` usa valores de prueba.
 
 `npm run ejemplos` regenera las tres capturas ficticias de `public/ejemplos/`.
 
@@ -159,8 +159,8 @@ La primera vez que la app habla con Turso crea las tablas y carga la semilla fic
 | --- | --- | --- |
 | `TURSO_DATABASE_URL` | Para que los reportes persistan | La URL `libsql://` o `https://` del paso 1 |
 | `TURSO_AUTH_TOKEN` | Junto con la URL | El token del paso 1 |
-| `TELEFONO_PEPPER` | **Obligatoria** | Clave secreta para el hash de los teléfonos. Generala con `openssl rand -hex 32` y no la cambies después |
-| `RATE_LIMIT_SALT` | Recomendada | Una frase larga, distinta de la del ejemplo |
+| `TELEFONO_PEPPER` | **Obligatoria** | Clave secreta para el HMAC de los teléfonos. Generá una con `openssl rand -hex 32` y no la cambies después |
+| `RATE_LIMIT_SALT` | **Obligatoria** | Sal propia del hash de IP del límite de uso. Una frase larga, distinta del ejemplo. Si falta, el límite avisa y usa un valor conocido |
 | `VISION_API_KEY` | No | Solo si querés el modelo de visión |
 | `VISION_API_BASE_URL` | No | Por defecto `https://api.openai.com/v1` |
 | `VISION_MODEL` | No | Por defecto `gpt-4o-mini` |
@@ -176,7 +176,7 @@ También se puede instalar Vercel desde la pestaña Apps del repo en Origin. Cad
 - En Comprobante, las tres capturas de ejemplo. Esas no esperan al OCR: usan el texto preparado y las mismas reglas. Una captura propia sí pasa por tesseract.js. Si el lector no arranca, la pantalla igual responde y no da luz verde.
 - Reportar un número y volver a consultarlo. Con Turso, el color se queda si recargás. Sin Turso, el inicio avisa que el reporte no sobrevive a un reinicio.
 
-En local no hace falta ninguna de esas variables: `npm install && npm run dev` sigue usando `data/semaforo.sqlite`.
+`npm run dev` no necesita esas variables: usa valores de prueba y `data/semaforo.sqlite`. En producción (`npm start` o Vercel) sí hacen falta `TELEFONO_PEPPER` y `RATE_LIMIT_SALT`.
 
 ## Limitaciones
 
