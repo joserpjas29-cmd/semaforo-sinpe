@@ -82,7 +82,7 @@ export default async function Inicio() {
         <div className="rounded-3xl bg-[#143f3a] p-6 text-[#f6f3ea]">
           <h2 className="font-heading text-2xl">Qué no hace</h2>
           <p className="mt-3 leading-relaxed text-[#f6f3ea]/85">
-            No confirma movimientos, no se conecta a tu banca y no está afiliada a ningún banco ni al
+            No confirma movimientos, no se conecta a tu banco y no está afiliada a ningún banco ni al
             BCCR. El verde significa «no hay alertas en esta lista», no «mandá la plata tranquilo».
           </p>
         </div>

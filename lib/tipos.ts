@@ -79,10 +79,10 @@ export const ETIQUETA_TIPO_CORTO: Record<TipoReporte, string> = {
 };
 
 export const RECORDATORIO_ENVIO =
-  "Verificá el nombre del beneficiario que te muestra tu banca antes de confirmar. Si ese nombre no es de quien esperás, no envíes la plata. El semáforo no reemplaza a tu banco.";
+  "Verificá el nombre del beneficiario que te muestra tu banco antes de confirmar. Si ese nombre no es de quien esperás, no envíes la plata. El semáforo no reemplaza a tu banco.";
 
 export const RECORDATORIO_RECIBO =
-  "Confirmá el depósito entrando a tu banca o a la app del banco. Un comprobante en el chat, aunque el semáforo salga verde, no es plata en la cuenta.";
+  "Confirmá el depósito entrando a tu banco o a la app del banco. Un comprobante en el chat, aunque el semáforo salga verde, no es plata en la cuenta.";
 
 export function esTipoReporte(valor: string): valor is TipoReporte {
   return (TIPOS_REPORTE as readonly string[]).includes(valor);

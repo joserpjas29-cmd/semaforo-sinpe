@@ -49,7 +49,7 @@ describe("heurísticas del comprobante", () => {
     expect(resultado.datos.nombreDestino).toMatch(/Jose Vargas/i);
     expect(resultado.datos.fechaTexto).toBe("01/10/2026");
     expect(resultado.datos.horaTexto).toBe("14:32");
-    expect(resultado.recordatorio).toMatch(/banca/i);
+    expect(resultado.recordatorio).toMatch(/banco/i);
   });
 
   it("no trata un texto vacío como luz verde", () => {
