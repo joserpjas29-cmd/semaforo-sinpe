@@ -1,8 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { REPORTES_EJEMPLO } from "./ejemplos";
-import { SENTENCIAS_ESQUEMA } from "./esquema";
-import { VENTANA_MS } from "./limite";
+import {
+  COLUMNA_TELEFONO_HASH,
+  META_PRIVACIDAD,
+  SENTENCIAS_INDICES,
+  SENTENCIAS_LIMPIEZA,
+  SENTENCIAS_TABLAS,
+} from "./esquema";
+import { contarEnVentana, DIA_MS, excedeLimite } from "./limite";
+import { hashTelefono, RETENCION_DIAS, validarSecretos } from "./privacidad";
 
 export type ModoAlmacen = "sqlite" | "turso" | "memoria";
 
@@ -21,25 +28,47 @@ export interface Conteos {
 }
 
 export interface Guardado {
-  telefono: string;
+  telefonoHash: string;
   tipo: string;
   descripcion: string;
   creadoEn: string;
-  ipHash: string;
-  borrarLimitesAntesDe: string;
+}
+
+export interface ConsumoLimite {
+  accion: string;
+  clave: string;
+  maximo: number;
+  ventanaMs: number;
+  ahora: Date;
+}
+
+export interface ResultadoLimite {
+  permitido: boolean;
+  reintentarEnSeg: number;
+}
+
+export interface CortesPurga {
+  reportesAntesDe: string;
+  eventosAntesDe: string;
 }
 
 export interface Almacen {
   modo: ModoAlmacen;
-  reportesDe(telefono: string): Promise<FilaReporte[]>;
+  reportesDe(telefonoHash: string): Promise<FilaReporte[]>;
   conteos(desdeIso: string): Promise<Conteos>;
-  marcasDesde(ipHash: string, desdeIso: string): Promise<string[]>;
   guardar(entrada: Guardado): Promise<number>;
+  /**
+   * Anota un uso y dice si cabía en el límite. Solo se anotan los usos permitidos:
+   * insistir con la puerta cerrada no alarga la espera. Es atómico en SQLite y en Turso.
+   */
+  consumirLimite(entrada: ConsumoLimite): Promise<ResultadoLimite>;
+  /** Borra reportes vencidos (menos los de demostración) y usos de límite viejos. Devuelve los reportes borrados. */
+  purgar(cortes: CortesPurga): Promise<number>;
   cerrar(): void;
 }
 
 interface FilaSemilla {
-  telefono: string;
+  telefonoHash: string;
   tipo: string;
   descripcion: string;
   creadoEn: string;
@@ -47,20 +76,23 @@ interface FilaSemilla {
 
 function filasSemilla(ahora = Date.now()): FilaSemilla[] {
   return REPORTES_EJEMPLO.map((reporte) => ({
-    telefono: reporte.telefono,
+    telefonoHash: hashTelefono(reporte.telefono),
     tipo: reporte.tipo,
     descripcion: reporte.descripcion,
     creadoEn: new Date(ahora - reporte.diasAtras * 86_400_000).toISOString(),
   }));
 }
 
-function conteosDe(filas: { telefono: string; tipo: string; creadoEn: string; esEjemplo: boolean }[], desdeIso: string): Conteos {
+function conteosDe(
+  filas: { telefonoHash: string; tipo: string; creadoEn: string; esEjemplo: boolean }[],
+  desdeIso: string,
+): Conteos {
   const porTipo = new Map<string, number>();
   const numeros = new Set<string>();
   let ejemplos = 0;
   let ultimos7dias = 0;
   for (const fila of filas) {
-    numeros.add(fila.telefono);
+    numeros.add(fila.telefonoHash);
     porTipo.set(fila.tipo, (porTipo.get(fila.tipo) ?? 0) + 1);
     if (fila.esEjemplo) ejemplos += 1;
     if (fila.creadoEn >= desdeIso) ultimos7dias += 1;
@@ -74,26 +106,99 @@ function conteosDe(filas: { telefono: string; tipo: string; creadoEn: string; es
   };
 }
 
+function desdeDe(ahora: Date, ventanaMs: number): string {
+  return new Date(ahora.getTime() - ventanaMs).toISOString();
+}
+
+/** Segundos hasta que el uso más viejo de la ventana salga de ella y se libere un lugar. */
+function reintentarEn(masAntiguaIso: string | null | undefined, ventanaMs: number, ahora: Date): number {
+  if (!masAntiguaIso) return 1;
+  const libre = new Date(masAntiguaIso).getTime() + ventanaMs;
+  if (!Number.isFinite(libre)) return 1;
+  return Math.max(1, Math.ceil((libre - ahora.getTime()) / 1000));
+}
+
+export function cortesDePurga(ahora: Date): CortesPurga {
+  return {
+    reportesAntesDe: new Date(ahora.getTime() - RETENCION_DIAS * DIA_MS).toISOString(),
+    eventosAntesDe: new Date(ahora.getTime() - 2 * DIA_MS).toISOString(),
+  };
+}
+
+const INTERVALO_PURGA_MS = 60 * 60 * 1000;
+const ultimaPurga = new WeakMap<Almacen, number>();
+
+/**
+ * No hay tarea programada en Vercel, así que el borrado ocurre cuando la app se usa:
+ * como mucho una vez por hora por instancia, y siempre en la primera consulta tras arrancar.
+ * Un fallo al borrar se registra pero no tumba la consulta ni el reporte.
+ */
+export async function purgarSiToca(almacen: Almacen, ahora: Date): Promise<void> {
+  const previa = ultimaPurga.get(almacen);
+  if (previa !== undefined && ahora.getTime() - previa < INTERVALO_PURGA_MS) return;
+  ultimaPurga.set(almacen, ahora.getTime());
+  try {
+    await almacen.purgar(cortesDePurga(ahora));
+  } catch (error) {
+    console.error("No pude borrar los reportes vencidos.", error);
+  }
+}
+
+/** Pasos de la migración que son iguales en SQLite y en Turso; cada uno aporta solo su adaptador. */
+export interface EjecutorMigracion {
+  meta(clave: string): Promise<string | null>;
+  fijarMeta(clave: string, valor: string): Promise<void>;
+  columnas(): Promise<string[]>;
+  ejecutar(sql: string): Promise<void>;
+  filasSinHash(): Promise<{ id: number; telefono: string }[]>;
+  guardarHashes(lote: { id: number; hash: string }[]): Promise<void>;
+}
+
+/**
+ * Pasa una base vieja (teléfonos e IP en claro) al esquema nuevo: calcula el HMAC de cada
+ * teléfono, deja la columna heredada vacía y borra el hash de IP de los reportes.
+ * Devuelve true si tuvo que reescribir filas. Es idempotente.
+ */
+export async function migrarPrivacidad(ej: EjecutorMigracion): Promise<boolean> {
+  if ((await ej.meta(META_PRIVACIDAD)) === "1") return false;
+
+  if (!(await ej.columnas()).includes("telefono_hash")) {
+    try {
+      await ej.ejecutar(COLUMNA_TELEFONO_HASH);
+    } catch (error) {
+      // Otra instancia pudo agregarla justo antes. Si sigue sin existir, el error es real.
+      if (!(await ej.columnas()).includes("telefono_hash")) throw error;
+    }
+  }
+
+  const pendientes = await ej.filasSinHash();
+  for (let inicio = 0; inicio < pendientes.length; inicio += 200) {
+    const lote = pendientes.slice(inicio, inicio + 200);
+    await ej.guardarHashes(lote.map((fila) => ({ id: fila.id, hash: hashTelefono(fila.telefono) })));
+  }
+  await ej.ejecutar(`UPDATE reportes SET ip_hash = NULL WHERE ip_hash IS NOT NULL`);
+  await ej.fijarMeta(META_PRIVACIDAD, "1");
+  return pendientes.length > 0;
+}
+
 export function crearAlmacenMemoria(ahora = Date.now()): Almacen {
   const reportes: {
     id: number;
-    telefono: string;
+    telefonoHash: string;
     tipo: string;
     descripcion: string;
     creadoEn: string;
-    ipHash: string | null;
     esEjemplo: boolean;
   }[] = [];
-  const limites: { ipHash: string; creadoEn: string }[] = [];
+  const eventos: { accion: string; clave: string; creadoEn: string }[] = [];
   let siguiente = 1;
   for (const fila of filasSemilla(ahora)) {
     reportes.push({
       id: siguiente,
-      telefono: fila.telefono,
+      telefonoHash: fila.telefonoHash,
       tipo: fila.tipo,
       descripcion: fila.descripcion,
       creadoEn: fila.creadoEn,
-      ipHash: null,
       esEjemplo: true,
     });
     siguiente += 1;
@@ -101,9 +206,9 @@ export function crearAlmacenMemoria(ahora = Date.now()): Almacen {
 
   return {
     modo: "memoria",
-    async reportesDe(telefono) {
+    async reportesDe(telefonoHash) {
       return reportes
-        .filter((fila) => fila.telefono === telefono)
+        .filter((fila) => fila.telefonoHash === telefonoHash)
         .map((fila) => ({
           tipo: fila.tipo,
           creado_en: fila.creadoEn,
@@ -113,29 +218,51 @@ export function crearAlmacenMemoria(ahora = Date.now()): Almacen {
     async conteos(desdeIso) {
       return conteosDe(reportes, desdeIso);
     },
-    async marcasDesde(ipHash, desdeIso) {
-      return limites
-        .filter((marca) => marca.ipHash === ipHash && marca.creadoEn >= desdeIso)
-        .map((marca) => marca.creadoEn);
-    },
     async guardar(entrada) {
       const id = siguiente;
       siguiente += 1;
       reportes.push({
         id,
-        telefono: entrada.telefono,
+        telefonoHash: entrada.telefonoHash,
         tipo: entrada.tipo,
         descripcion: entrada.descripcion,
         creadoEn: entrada.creadoEn,
-        ipHash: entrada.ipHash,
         esEjemplo: false,
       });
-      limites.push({ ipHash: entrada.ipHash, creadoEn: entrada.creadoEn });
-      for (let indice = limites.length - 1; indice >= 0; indice -= 1) {
-        const marca = limites[indice];
-        if (marca && marca.creadoEn < entrada.borrarLimitesAntesDe) limites.splice(indice, 1);
-      }
       return id;
+    },
+    async consumirLimite({ accion, clave, maximo, ventanaMs, ahora: instante }) {
+      const desde = desdeDe(instante, ventanaMs);
+      for (let indice = eventos.length - 1; indice >= 0; indice -= 1) {
+        const evento = eventos[indice];
+        if (evento && evento.accion === accion && evento.clave === clave && evento.creadoEn < desde) {
+          eventos.splice(indice, 1);
+        }
+      }
+      const marcas = eventos
+        .filter((evento) => evento.accion === accion && evento.clave === clave)
+        .map((evento) => evento.creadoEn)
+        .sort();
+      if (excedeLimite(contarEnVentana(marcas, instante, ventanaMs), maximo)) {
+        return { permitido: false, reintentarEnSeg: reintentarEn(marcas[0], ventanaMs, instante) };
+      }
+      eventos.push({ accion, clave, creadoEn: instante.toISOString() });
+      return { permitido: true, reintentarEnSeg: 0 };
+    },
+    async purgar({ reportesAntesDe, eventosAntesDe }) {
+      let borrados = 0;
+      for (let indice = reportes.length - 1; indice >= 0; indice -= 1) {
+        const fila = reportes[indice];
+        if (fila && !fila.esEjemplo && fila.creadoEn < reportesAntesDe) {
+          reportes.splice(indice, 1);
+          borrados += 1;
+        }
+      }
+      for (let indice = eventos.length - 1; indice >= 0; indice -= 1) {
+        const evento = eventos[indice];
+        if (evento && evento.creadoEn < eventosAntesDe) eventos.splice(indice, 1);
+      }
+      return borrados;
     },
     cerrar() {},
   };
@@ -149,13 +276,13 @@ function sembrarSqlite(db: DatabaseSync, ahora = Date.now()) {
     | undefined;
   if (existente) return;
   const insertar = db.prepare(
-    `INSERT INTO reportes (telefono, tipo, descripcion, creado_en, ip_hash, es_ejemplo)
-     VALUES (?, ?, ?, ?, NULL, 1)`,
+    `INSERT INTO reportes (telefono, telefono_hash, tipo, descripcion, creado_en, ip_hash, es_ejemplo)
+     VALUES ('', ?, ?, ?, ?, NULL, 1)`,
   );
   db.exec("BEGIN");
   try {
     for (const fila of filasSemilla(ahora)) {
-      insertar.run(fila.telefono, fila.tipo, fila.descripcion, fila.creadoEn);
+      insertar.run(fila.telefonoHash, fila.tipo, fila.descripcion, fila.creadoEn);
     }
     db.prepare(`INSERT INTO meta (clave, valor) VALUES ('semilla', '1')`).run();
     db.exec("COMMIT");
@@ -165,24 +292,69 @@ function sembrarSqlite(db: DatabaseSync, ahora = Date.now()) {
   }
 }
 
+function ejecutorSqlite(db: DatabaseSync): EjecutorMigracion {
+  return {
+    async meta(clave) {
+      const fila = db.prepare(`SELECT valor FROM meta WHERE clave = ?`).get(clave) as { valor: string } | undefined;
+      return fila?.valor ?? null;
+    },
+    async fijarMeta(clave, valor) {
+      db.prepare(
+        `INSERT INTO meta (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor`,
+      ).run(clave, valor);
+    },
+    async columnas() {
+      return (db.prepare(`PRAGMA table_info(reportes)`).all() as unknown as { name: string }[]).map((c) => c.name);
+    },
+    async ejecutar(sql) {
+      db.exec(sql);
+    },
+    async filasSinHash() {
+      const filas = db
+        .prepare(`SELECT id, telefono FROM reportes WHERE telefono_hash IS NULL AND telefono <> ''`)
+        .all() as unknown as { id: number; telefono: string }[];
+      return filas.map((fila) => ({ id: Number(fila.id), telefono: fila.telefono }));
+    },
+    async guardarHashes(lote) {
+      const actualizar = db.prepare(`UPDATE reportes SET telefono_hash = ?, telefono = '' WHERE id = ?`);
+      db.exec("BEGIN");
+      try {
+        for (const fila of lote) actualizar.run(fila.hash, fila.id);
+        db.exec("COMMIT");
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
+    },
+  };
+}
+
 export async function crearAlmacenSqlite(archivo: string): Promise<Almacen> {
   const { DatabaseSync } = await import("node:sqlite");
   fs.mkdirSync(path.dirname(archivo), { recursive: true });
   const db = new DatabaseSync(archivo);
-  db.exec(`PRAGMA journal_mode = WAL; ${SENTENCIAS_ESQUEMA.join(";")};`);
+  db.exec("PRAGMA journal_mode = WAL");
+  db.exec(`${SENTENCIAS_TABLAS.join(";\n")};`);
+  const reescribio = await migrarPrivacidad(ejecutorSqlite(db));
+  db.exec(`${[...SENTENCIAS_INDICES, ...SENTENCIAS_LIMPIEZA].join(";\n")};`);
+  if (reescribio) {
+    // Sin esto, los teléfonos en claro seguirían en páginas libres y en el archivo -wal.
+    db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+    db.exec("VACUUM");
+  }
   sembrarSqlite(db);
 
   return {
     modo: "sqlite",
-    async reportesDe(telefono) {
+    async reportesDe(telefonoHash) {
       return db
-        .prepare(`SELECT tipo, creado_en, es_ejemplo FROM reportes WHERE telefono = ?`)
-        .all(telefono) as unknown as FilaReporte[];
+        .prepare(`SELECT tipo, creado_en, es_ejemplo FROM reportes WHERE telefono_hash = ?`)
+        .all(telefonoHash) as unknown as FilaReporte[];
     },
     async conteos(desdeIso) {
       const total = Number((db.prepare(`SELECT COUNT(*) AS n FROM reportes`).get() as { n: number }).n);
       const numerosDistintos = Number(
-        (db.prepare(`SELECT COUNT(DISTINCT telefono) AS n FROM reportes`).get() as { n: number }).n,
+        (db.prepare(`SELECT COUNT(DISTINCT telefono_hash) AS n FROM reportes`).get() as { n: number }).n,
       );
       const ultimos7dias = Number(
         (db.prepare(`SELECT COUNT(*) AS n FROM reportes WHERE creado_en >= ?`).get(desdeIso) as { n: number }).n,
@@ -202,29 +374,41 @@ export async function crearAlmacenSqlite(archivo: string): Promise<Almacen> {
         porTipo: porTipo.map((fila) => ({ tipo: fila.tipo, n: Number(fila.n) })),
       };
     },
-    async marcasDesde(ipHash, desdeIso) {
-      const filas = db
-        .prepare(`SELECT creado_en FROM limites WHERE ip_hash = ? AND creado_en >= ?`)
-        .all(ipHash, desdeIso) as unknown as { creado_en: string }[];
-      return filas.map((fila) => fila.creado_en);
-    },
     async guardar(entrada) {
-      db.exec("BEGIN");
-      try {
-        const resultado = db
-          .prepare(
-            `INSERT INTO reportes (telefono, tipo, descripcion, creado_en, ip_hash, es_ejemplo)
-             VALUES (?, ?, ?, ?, ?, 0)`,
-          )
-          .run(entrada.telefono, entrada.tipo, entrada.descripcion, entrada.creadoEn, entrada.ipHash);
-        db.prepare(`INSERT INTO limites (ip_hash, creado_en) VALUES (?, ?)`).run(entrada.ipHash, entrada.creadoEn);
-        db.prepare(`DELETE FROM limites WHERE creado_en < ?`).run(entrada.borrarLimitesAntesDe);
-        db.exec("COMMIT");
-        return Number(resultado.lastInsertRowid);
-      } catch (error) {
-        db.exec("ROLLBACK");
-        throw error;
-      }
+      const resultado = db
+        .prepare(
+          `INSERT INTO reportes (telefono, telefono_hash, tipo, descripcion, creado_en, ip_hash, es_ejemplo)
+           VALUES ('', ?, ?, ?, ?, NULL, 0)`,
+        )
+        .run(entrada.telefonoHash, entrada.tipo, entrada.descripcion, entrada.creadoEn);
+      return Number(resultado.lastInsertRowid);
+    },
+    async consumirLimite({ accion, clave, maximo, ventanaMs, ahora }) {
+      const desde = desdeDe(ahora, ventanaMs);
+      db.prepare(`DELETE FROM eventos_limite WHERE accion = ? AND clave = ? AND creado_en < ?`).run(
+        accion,
+        clave,
+        desde,
+      );
+      const insertado = db
+        .prepare(
+          `INSERT INTO eventos_limite (accion, clave, creado_en)
+           SELECT ?, ?, ?
+           WHERE (SELECT COUNT(*) FROM eventos_limite WHERE accion = ? AND clave = ? AND creado_en >= ?) < ?`,
+        )
+        .run(accion, clave, ahora.toISOString(), accion, clave, desde, maximo);
+      if (Number(insertado.changes) > 0) return { permitido: true, reintentarEnSeg: 0 };
+      const fila = db
+        .prepare(`SELECT MIN(creado_en) AS mas_antiguo FROM eventos_limite WHERE accion = ? AND clave = ? AND creado_en >= ?`)
+        .get(accion, clave, desde) as { mas_antiguo: string | null } | undefined;
+      return { permitido: false, reintentarEnSeg: reintentarEn(fila?.mas_antiguo, ventanaMs, ahora) };
+    },
+    async purgar({ reportesAntesDe, eventosAntesDe }) {
+      const borrados = db
+        .prepare(`DELETE FROM reportes WHERE es_ejemplo = 0 AND creado_en < ?`)
+        .run(reportesAntesDe);
+      db.prepare(`DELETE FROM eventos_limite WHERE creado_en < ?`).run(eventosAntesDe);
+      return Number(borrados.changes);
     },
     cerrar() {
       db.close();
@@ -237,16 +421,61 @@ function celda(fila: Record<string, unknown>, clave: string): string {
   return valor == null ? "" : String(valor);
 }
 
+type ClienteTurso = Awaited<ReturnType<typeof import("@libsql/client/web").createClient>>;
+
+function ejecutorTurso(cliente: ClienteTurso): EjecutorMigracion {
+  return {
+    async meta(clave) {
+      const resultado = await cliente.execute({ sql: `SELECT valor FROM meta WHERE clave = ?`, args: [clave] });
+      const fila = resultado.rows[0] as unknown as Record<string, unknown> | undefined;
+      return fila ? celda(fila, "valor") : null;
+    },
+    async fijarMeta(clave, valor) {
+      await cliente.execute({
+        sql: `INSERT INTO meta (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor`,
+        args: [clave, valor],
+      });
+    },
+    async columnas() {
+      const resultado = await cliente.execute(`PRAGMA table_info(reportes)`);
+      return resultado.rows.map((fila) => celda(fila as unknown as Record<string, unknown>, "name"));
+    },
+    async ejecutar(sql) {
+      await cliente.execute(sql);
+    },
+    async filasSinHash() {
+      const resultado = await cliente.execute(
+        `SELECT id, telefono FROM reportes WHERE telefono_hash IS NULL AND telefono <> ''`,
+      );
+      return resultado.rows.map((fila) => {
+        const registro = fila as unknown as Record<string, unknown>;
+        return { id: Number(registro.id), telefono: celda(registro, "telefono") };
+      });
+    },
+    async guardarHashes(lote) {
+      await cliente.batch(
+        lote.map((fila) => ({
+          sql: `UPDATE reportes SET telefono_hash = ?, telefono = '' WHERE id = ?`,
+          args: [fila.hash, fila.id],
+        })),
+        "write",
+      );
+    },
+  };
+}
+
 async function crearAlmacenTurso(url: string, authToken: string | undefined): Promise<Almacen> {
   const { createClient } = await import("@libsql/client/web");
   const cliente = createClient({ url, authToken });
-  await cliente.executeMultiple(SENTENCIAS_ESQUEMA.join(";\n"));
+  await cliente.executeMultiple(`${SENTENCIAS_TABLAS.join(";\n")};`);
+  await migrarPrivacidad(ejecutorTurso(cliente));
+  await cliente.executeMultiple(`${[...SENTENCIAS_INDICES, ...SENTENCIAS_LIMPIEZA].join(";\n")};`);
   const marca = await cliente.execute(`SELECT valor FROM meta WHERE clave = 'semilla'`);
   if (marca.rows.length === 0) {
     const inserts = filasSemilla().map((fila) => ({
-      sql: `INSERT INTO reportes (telefono, tipo, descripcion, creado_en, ip_hash, es_ejemplo)
-            VALUES (?, ?, ?, ?, NULL, 1)`,
-      args: [fila.telefono, fila.tipo, fila.descripcion, fila.creadoEn],
+      sql: `INSERT INTO reportes (telefono, telefono_hash, tipo, descripcion, creado_en, ip_hash, es_ejemplo)
+            VALUES ('', ?, ?, ?, ?, NULL, 1)`,
+      args: [fila.telefonoHash, fila.tipo, fila.descripcion, fila.creadoEn],
     }));
     await cliente.batch(
       [...inserts, { sql: `INSERT INTO meta (clave, valor) VALUES ('semilla', '1')`, args: [] }],
@@ -256,10 +485,10 @@ async function crearAlmacenTurso(url: string, authToken: string | undefined): Pr
 
   return {
     modo: "turso",
-    async reportesDe(telefono) {
+    async reportesDe(telefonoHash) {
       const resultado = await cliente.execute({
-        sql: `SELECT tipo, creado_en, es_ejemplo FROM reportes WHERE telefono = ?`,
-        args: [telefono],
+        sql: `SELECT tipo, creado_en, es_ejemplo FROM reportes WHERE telefono_hash = ?`,
+        args: [telefonoHash],
       });
       return resultado.rows.map((fila) => {
         const registro = fila as unknown as Record<string, unknown>;
@@ -274,7 +503,7 @@ async function crearAlmacenTurso(url: string, authToken: string | undefined): Pr
       const [total, numeros, recientes, ejemplos, tipos] = await cliente.batch(
         [
           `SELECT COUNT(*) AS n FROM reportes`,
-          `SELECT COUNT(DISTINCT telefono) AS n FROM reportes`,
+          `SELECT COUNT(DISTINCT telefono_hash) AS n FROM reportes`,
           { sql: `SELECT COUNT(*) AS n FROM reportes WHERE creado_en >= ?`, args: [desdeIso] },
           `SELECT COUNT(*) AS n FROM reportes WHERE es_ejemplo = 1`,
           `SELECT tipo, COUNT(*) AS n FROM reportes GROUP BY tipo`,
@@ -294,33 +523,55 @@ async function crearAlmacenTurso(url: string, authToken: string | undefined): Pr
         }),
       };
     },
-    async marcasDesde(ipHash, desdeIso) {
-      const resultado = await cliente.execute({
-        sql: `SELECT creado_en FROM limites WHERE ip_hash = ? AND creado_en >= ?`,
-        args: [ipHash, desdeIso],
-      });
-      return resultado.rows.map((fila) => celda(fila as unknown as Record<string, unknown>, "creado_en"));
-    },
     async guardar(entrada) {
       const [insertado] = await cliente.batch(
         [
           {
-            sql: `INSERT INTO reportes (telefono, tipo, descripcion, creado_en, ip_hash, es_ejemplo)
-                  VALUES (?, ?, ?, ?, ?, 0)`,
-            args: [entrada.telefono, entrada.tipo, entrada.descripcion, entrada.creadoEn, entrada.ipHash],
-          },
-          {
-            sql: `INSERT INTO limites (ip_hash, creado_en) VALUES (?, ?)`,
-            args: [entrada.ipHash, entrada.creadoEn],
-          },
-          {
-            sql: `DELETE FROM limites WHERE creado_en < ?`,
-            args: [entrada.borrarLimitesAntesDe],
+            sql: `INSERT INTO reportes (telefono, telefono_hash, tipo, descripcion, creado_en, ip_hash, es_ejemplo)
+                  VALUES ('', ?, ?, ?, ?, NULL, 0)`,
+            args: [entrada.telefonoHash, entrada.tipo, entrada.descripcion, entrada.creadoEn],
           },
         ],
         "write",
       );
       return Number(insertado?.lastInsertRowid ?? 0);
+    },
+    async consumirLimite({ accion, clave, maximo, ventanaMs, ahora }) {
+      const desde = desdeDe(ahora, ventanaMs);
+      // Un solo lote es una sola transacción: el conteo y el insert no se pueden cruzar con otra petición.
+      const [, insertado, masAntiguo] = await cliente.batch(
+        [
+          {
+            sql: `DELETE FROM eventos_limite WHERE accion = ? AND clave = ? AND creado_en < ?`,
+            args: [accion, clave, desde],
+          },
+          {
+            sql: `INSERT INTO eventos_limite (accion, clave, creado_en)
+                  SELECT ?, ?, ?
+                  WHERE (SELECT COUNT(*) FROM eventos_limite WHERE accion = ? AND clave = ? AND creado_en >= ?) < ?`,
+            args: [accion, clave, ahora.toISOString(), accion, clave, desde, maximo],
+          },
+          {
+            sql: `SELECT MIN(creado_en) AS mas_antiguo FROM eventos_limite WHERE accion = ? AND clave = ? AND creado_en >= ?`,
+            args: [accion, clave, desde],
+          },
+        ],
+        "write",
+      );
+      if ((insertado?.rowsAffected ?? 0) > 0) return { permitido: true, reintentarEnSeg: 0 };
+      const fila = masAntiguo?.rows[0] as unknown as Record<string, unknown> | undefined;
+      const valor = fila ? celda(fila, "mas_antiguo") : "";
+      return { permitido: false, reintentarEnSeg: reintentarEn(valor || null, ventanaMs, ahora) };
+    },
+    async purgar({ reportesAntesDe, eventosAntesDe }) {
+      const [borrados] = await cliente.batch(
+        [
+          { sql: `DELETE FROM reportes WHERE es_ejemplo = 0 AND creado_en < ?`, args: [reportesAntesDe] },
+          { sql: `DELETE FROM eventos_limite WHERE creado_en < ?`, args: [eventosAntesDe] },
+        ],
+        "write",
+      );
+      return borrados?.rowsAffected ?? 0;
     },
     cerrar() {
       cliente.close();
@@ -343,6 +594,8 @@ export function fijarAlmacenParaPruebas(almacen: Almacen | null) {
 }
 
 async function abrir(): Promise<Almacen> {
+  // Antes de cualquier try: si falta la clave en producción, que el error diga eso y no "Turso no respondió".
+  validarSecretos();
   const turso = process.env.TURSO_DATABASE_URL?.trim();
   if (turso) {
     try {
@@ -365,10 +618,12 @@ async function abrir(): Promise<Almacen> {
 
 export function obtenerAlmacen(): Promise<Almacen> {
   if (estado.semaforoAlmacenFijo) return Promise.resolve(estado.semaforoAlmacenFijo);
-  if (!estado.semaforoAlmacen) estado.semaforoAlmacen = abrir();
+  if (!estado.semaforoAlmacen) {
+    estado.semaforoAlmacen = abrir().catch((error) => {
+      // No dejar guardada una promesa rechazada: tras corregir la configuración se reintenta.
+      estado.semaforoAlmacen = undefined;
+      throw error;
+    });
+  }
   return estado.semaforoAlmacen;
-}
-
-export function corteLimites(ahora: Date): string {
-  return new Date(ahora.getTime() - 2 * VENTANA_MS).toISOString();
 }

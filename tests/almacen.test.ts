@@ -3,6 +3,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { crearAlmacenMemoria, crearAlmacenSqlite, fijarAlmacenParaPruebas } from "../lib/almacen";
 import { consultarNumero, crearReporte, obtenerEstadisticas } from "../lib/db";
+import { hashTelefono } from "../lib/privacidad";
 import { rm } from "node:fs/promises";
 
 describe("almacén con semilla", () => {
@@ -42,9 +43,10 @@ describe("almacén con semilla", () => {
   it("frena el reporte número 11 de la misma conexión", async () => {
     fijarAlmacenParaPruebas(crearAlmacenMemoria());
     const ahora = new Date();
+    // Números distintos: el tope por número (5 al día) es otro límite y tiene su propia prueba.
     for (let indice = 0; indice < 10; indice += 1) {
       const resultado = await crearReporte({
-        telefono: "70001111",
+        telefono: `7000${1000 + indice}`,
         tipo: "otro",
         descripcion: `Aviso de prueba número ${indice} para el límite.`,
         ipHash: "prueba-limite",
@@ -53,7 +55,7 @@ describe("almacén con semilla", () => {
       expect(resultado.ok).toBe(true);
     }
     const extra = await crearReporte({
-      telefono: "70001111",
+      telefono: "70002000",
       tipo: "otro",
       descripcion: "Este aviso ya debería topar el límite por hora.",
       ipHash: "prueba-limite",
@@ -74,7 +76,7 @@ describe("almacén con semilla", () => {
       expect(rojo?.esEjemplo).toBe(true);
 
       const segunda = await crearAlmacenSqlite(archivo);
-      const filas = await segunda.reportesDe("60603030");
+      const filas = await segunda.reportesDe(hashTelefono("60603030"));
       expect(filas.length).toBe(3);
       segunda.cerrar();
 
