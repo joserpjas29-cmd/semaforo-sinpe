@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     template: "%s · Semáforo SINPE",
   },
   description:
-    "Consultá un número, analizá un comprobante y reportá estafas de SINPE Móvil en Costa Rica. Antes de soltar la plata, mirá el semáforo.",
+    "Consultá un número, revisá un SMS o un comprobante y reportá estafas de SINPE Móvil en Costa Rica. Antes de soltar la plata, mirá el semáforo.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -11,7 +11,7 @@ SINPE Móvil es instantáneo. También lo es la estafa. Dos patrones se repiten:
 1. **Antes de enviar.** El número era de otra persona (un chip reciclado) o ya lo reportaron por pedir devoluciones y mandar comprobantes que no cuadran. El banco muestra el nombre del beneficiario, pero en el apuro mucha gente no lo lee.
 2. **Al recibir.** El cliente manda una captura. La plata no está en la cuenta. El mensaje dice «me equivoqué, devuélvame ya». Si devolvés, estás regalando plata de tu bolsillo.
 
-Semáforo SINPE junta reportes de la gente para el primer caso y lee la captura en la misma máquina para el segundo.
+Semáforo SINPE junta reportes de la gente para el primer caso, lee la captura en la misma máquina para el segundo, y revisa un SMS de comprobante en el navegador sin guardarlo.
 
 ## Cómo funciona
 
@@ -52,6 +52,21 @@ Una señal alta enciende el rojo. Una señal media, el amarillo. Si no se lee na
 Si existe `VISION_API_KEY`, primero se intenta un modelo de visión compatible con la API de chat de OpenAI. Si falla o no está la variable, se usa el OCR. La app no se rompe sin la llave.
 
 Siempre se recuerda confirmar el depósito en el banco. Un comprobante en el chat no es plata en la cuenta.
+
+### Revisar un SMS
+
+En `/sms` se pega el mensaje de texto y, si se quiere, una nota corta. El análisis corre en el navegador: el SMS no se envía al servidor ni se guarda.
+
+Es una revisión educativa. No se conecta a ningún banco y no puede probar que el mensaje sea real. Las reglas miran:
+
+- enlaces raros, acortados o que no son de un banco conocido;
+- lenguaje de apuro, bloqueo de cuenta, pedido de clave o de devolución;
+- más de un banco, o un SINPE mezclado con PayPal, cripto, otro país o un IBAN que no empieza con CR;
+- falta de monto, referencia o fecha/hora;
+- remitente raro (correo, número de otro país, celular personal, o un nombre de banco con «alerta» o «premio»);
+- errores de escritura típicos de phishing.
+
+Rojo: sospechoso. Amarillo: no está claro. Verde: se ve normal. El verde no prueba que el comprobante sea real.
 
 ### Reportar
 
@@ -174,6 +189,7 @@ También se puede instalar Vercel desde la pestaña Apps del repo en Origin. Cad
 - Inicio: los cuatro números de la demo y el panel de reportes (6, con la nota de ejemplos ficticios).
 - `6060 3030` en rojo, `7070 2020` en amarillo, `8881 0001` y `5111 9090` en verde.
 - En Comprobante, las tres capturas de ejemplo. Esas no esperan al OCR: usan el texto preparado y las mismas reglas. Una captura propia sí pasa por tesseract.js. Si el lector no arranca, la pantalla igual responde y no da luz verde.
+- En SMS, los tres mensajes ficticios: uno se ve normal, uno sospechoso y uno que no está claro. El texto no sale del navegador.
 - Reportar un número y volver a consultarlo. Con Turso, el color se queda si recargás. Sin Turso, el inicio avisa que el reporte no sobrevive a un reinicio.
 
 `npm run dev` no necesita esas variables: usa valores de prueba y `data/semaforo.sqlite`. En producción (`npm start` o Vercel) sí hacen falta `TELEFONO_PEPPER` y `RATE_LIMIT_SALT`.
@@ -183,6 +199,7 @@ También se puede instalar Vercel desde la pestaña Apps del repo en Origin. Cad
 - Sin Turso, en Vercel la lista es la semilla de esa instancia. No es una red nacional de reportes. Con Turso, lo que se reporta se ve en las siguientes visitas.
 - Verde no significa «es seguro». Significa que esta lista no tiene alertas suficientes. Un número nuevo, o uno que nadie marcó, sale verde.
 - El OCR se equivoca con capturas borrosas, recortes o tipografías raras. Por eso una lectura vacía no se presenta como luz verde.
+- La revisión del SMS es educativa y local. Puede marcar un comprobante real con un enlace o un typo, o dejar pasar uno falso bien escrito. No consulta al banco.
 - Las reglas de referencia y de formato son heurísticas, no el formato oficial de cada banco. Pueden marcar un comprobante real raro, o dejar pasar uno editado con cuidado.
 - El límite por IP no frena a quien rota de red: por eso existe también el tope por número, que acota el daño. La IP sale de las cabeceras de la plataforma (en Vercel el visitante no las puede fijar). Detrás de un proxy propio, asegurate de que sobrescriba `X-Real-IP` y `X-Forwarded-For`, o el límite se puede esquivar escribiendo esas cabeceras.
 - Sin Turso en Vercel, los contadores de límite viven en la memoria de cada instancia y no se comparten entre ellas.
