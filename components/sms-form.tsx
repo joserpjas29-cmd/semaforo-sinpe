@@ -31,8 +31,8 @@ export function SmsForm() {
         <p className="text-sm font-semibold tracking-[0.14em] text-primary uppercase">Mensaje de texto</p>
         <h1 className="font-heading text-4xl text-balance">Revisá el SMS</h1>
         <p className="leading-relaxed text-muted-foreground">
-          Pegá el mensaje que te llegó, del estilo de Banco Nacional o SINPE Móvil. Buscamos señales
-          raras en el texto. No es una verificación del banco.
+          Pegá el mensaje que te llegó, del estilo de un banco de Costa Rica o de SINPE Móvil. Buscamos
+          señales raras en el texto. No es una verificación del banco.
         </p>
         <p className="text-sm leading-relaxed">
           <Link href="/comprobante" className="font-medium text-primary underline-offset-4 hover:underline">
@@ -56,7 +56,9 @@ export function SmsForm() {
               </li>
             ))}
           </ul>
-          <p className="text-sm text-muted-foreground">Textos armados para la demo. No son mensajes reales.</p>
+          <p className="text-sm text-muted-foreground">
+            Textos ficticios de Banco Nacional, BCR y BAC, marcados por la luz esperada. No son mensajes reales.
+          </p>
         </fieldset>
 
         <div className="space-y-2">

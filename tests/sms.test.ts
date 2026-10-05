@@ -152,8 +152,33 @@ Referencia: 889912345`);
   });
 
   it("los ejemplos de la pantalla caen en el color que prometen", () => {
+    expect(EJEMPLOS_SMS.length).toBeGreaterThanOrEqual(5);
+    expect(EJEMPLOS_SMS.length).toBeLessThanOrEqual(6);
+
+    const etiquetas = EJEMPLOS_SMS.map((ejemplo) => ejemplo.etiqueta.toLowerCase()).join(" ");
+    expect(etiquetas).toMatch(/verde/);
+    expect(etiquetas).toMatch(/amarillo/);
+    expect(etiquetas).toMatch(/rojo/);
+
+    const textos = EJEMPLOS_SMS.map((ejemplo) => `${ejemplo.etiqueta}\n${ejemplo.texto}`).join("\n");
+    expect(textos).toMatch(/banco nacional|bncr/i);
+    expect(textos).toMatch(/\bbcr\b|banco de costa rica/i);
+    expect(textos).toMatch(/\bbac\b/i);
+    expect(textos).not.toMatch(/banca/i);
+
+    const verdes = EJEMPLOS_SMS.filter((ejemplo) => ejemplo.veredicto === "se_ve_normal");
+    expect(verdes.length).toBeGreaterThanOrEqual(2);
+    expect(verdes.every((ejemplo) => !/https?:\/\//i.test(ejemplo.texto))).toBe(true);
+    expect(EJEMPLOS_SMS.some((ejemplo) => ejemplo.veredicto === "poco_claro")).toBe(true);
+    expect(EJEMPLOS_SMS.some((ejemplo) => ejemplo.veredicto === "sospechoso")).toBe(true);
+
     for (const ejemplo of EJEMPLOS_SMS) {
-      expect(analizarSms(ejemplo.texto, ejemplo.nota ?? "").veredicto).toBe(ejemplo.veredicto);
+      const resultado = analizarSms(ejemplo.texto, ejemplo.nota ?? "");
+      expect(resultado.veredicto).toBe(ejemplo.veredicto);
+      expect(resultado.color).toBe(
+        ejemplo.veredicto === "se_ve_normal" ? "verde" : ejemplo.veredicto === "poco_claro" ? "amarillo" : "rojo",
+      );
+      expect(`${ejemplo.etiqueta} ${ejemplo.texto} ${resultado.explicacion}`).not.toMatch(/banca/i);
     }
   });
 

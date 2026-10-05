@@ -68,6 +68,14 @@ Es una revisión educativa. No se conecta a ningún banco y no puede probar que 
 
 Rojo: sospechoso. Amarillo: no está claro. Verde: se ve normal. El verde no prueba que el comprobante sea real.
 
+En la pantalla hay seis SMS ficticios. Un toque llena el texto. Están marcados por luz y banco:
+
+- **Verde:** Banco Nacional y BCR, con monto, referencia y fecha u hora, sin enlaces ni apuro.
+- **Amarillo:** Banco Nacional sin monto ni referencia, y un BAC con una redacción que no cierra.
+- **Rojo:** un Banco Nacional con enlace y cuenta bloqueada, y un BAC que pide el PIN, apura y muestra un teléfono de otro país.
+
+Ninguno es un mensaje real ni se conecta a un banco.
+
 ### Reportar
 
 El formulario pide número, tipo (comprobante falso, número reciclado, pidió devolución, otro) y una descripción breve. Ese reporte entra en la consulta. La nota de privacidad está en el formulario.
@@ -189,7 +197,7 @@ También se puede instalar Vercel desde la pestaña Apps del repo en Origin. Cad
 - Inicio: los cuatro números de la demo y el panel de reportes (6, con la nota de ejemplos ficticios).
 - `6060 3030` en rojo, `7070 2020` en amarillo, `8881 0001` y `5111 9090` en verde.
 - En Comprobante, las tres capturas de ejemplo. Esas no esperan al OCR: usan el texto preparado y las mismas reglas. Una captura propia sí pasa por tesseract.js. Si el lector no arranca, la pantalla igual responde y no da luz verde.
-- En SMS, los tres mensajes ficticios: uno se ve normal, uno sospechoso y uno que no está claro. El texto no sale del navegador.
+- En SMS, seis mensajes ficticios de Banco Nacional, BCR y BAC (verde, amarillo y rojo). Un toque llena el texto. El SMS no sale del navegador.
 - Reportar un número y volver a consultarlo. Con Turso, el color se queda si recargás. Sin Turso, el inicio avisa que el reporte no sobrevive a un reinicio.
 
 `npm run dev` no necesita esas variables: usa valores de prueba y `data/semaforo.sqlite`. En producción (`npm start` o Vercel) sí hacen falta `TELEFONO_PEPPER` y `RATE_LIMIT_SALT`.
