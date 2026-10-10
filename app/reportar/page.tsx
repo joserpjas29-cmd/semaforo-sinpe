@@ -3,7 +3,7 @@ import { ReportarForm } from "@/components/reportar-form";
 
 export const metadata: Metadata = {
   title: "Reportar número",
-  description: "Reportá un número ligado a un comprobante falso, un número reciclado o una devolución.",
+  description: "Reportá un número ligado a un comprobante falso, un número reciclado o una devolución. El celular se guarda cifrado.",
 };
 
 export default async function PaginaReportar({

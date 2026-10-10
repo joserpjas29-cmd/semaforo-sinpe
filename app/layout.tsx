@@ -1,45 +1,44 @@
-import type { Metadata } from "next";
-import { Fraunces, Outfit } from "next/font/google";
-import { Barra, Pie } from "@/components/barra";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
+import { Navegacion } from "@/components/navegacion";
 import "./globals.css";
 
-const outfit = Outfit({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-outfit",
-  display: "swap",
-});
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
+  variable: "--font-inter",
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "Semáforo SINPE",
-    template: "%s · Semáforo SINPE",
+    default: "Stopfy",
+    template: "%s · Stopfy",
   },
   description:
-    "Consultá un número, revisá un SMS o un comprobante y reportá estafas de SINPE Móvil en Costa Rica. Antes de soltar la plata, mirá el semáforo.",
+    "Detectá estafas de SINPE Móvil antes de transferir. Stopfy nació como Semáforo SINPE: consultá un número, un comprobante o un SMS, y reportá. No reemplaza a tu banco.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#F8FAFC",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es-CR" className={`${outfit.variable} ${fraunces.variable} h-full antialiased`}>
-      <body className="min-h-full">
+    <html lang="es-CR" className={`${inter.variable} h-full antialiased`}>
+      <body className="min-h-full bg-[#F8FAFC] text-[#0F172A] md:bg-[#E7EDF5]">
         <a
           href="#contenido"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2"
         >
           Saltar al contenido
         </a>
-        <div className="flex min-h-full flex-col pb-16 md:pb-0">
-          <Barra />
-          <main id="contenido" className="flex-1">
+        <div className="relative mx-auto flex h-dvh max-h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#F8FAFC] md:my-6 md:h-[calc(100dvh-3rem)] md:rounded-[32px] md:shadow-[0_24px_60px_rgb(15_23_42_/_0.08)] md:ring-1 md:ring-[#E2E8F0]">
+          <main id="contenido" className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-5 pb-24">
             {children}
           </main>
-          <Pie />
+          <Navegacion />
         </div>
       </body>
     </html>

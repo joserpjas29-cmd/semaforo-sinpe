@@ -9,31 +9,31 @@ export function PanelEstadisticas({ datos }: { datos: Estadisticas }) {
   ];
 
   return (
-    <section aria-labelledby="titulo-estadisticas" className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <h2 id="titulo-estadisticas" className="font-heading text-2xl">
-          La lista colectiva
+    <section aria-labelledby="titulo-estadisticas" className="space-y-3">
+      <div>
+        <h2 id="titulo-estadisticas" className="text-lg font-extrabold tracking-tight text-[#0F172A]">
+          La lista, ahora
         </h2>
-        <div className="space-y-1 text-sm text-muted-foreground">
+        <div className="mt-1 space-y-1 text-sm leading-relaxed text-[#64748B]">
           {datos.incluyeEjemplos && <p>Incluye ejemplos ficticios de la demo.</p>}
           {datos.persistencia === "memoria" && (
             <p>Sin base configurada, un reporte nuevo se ve en esta instancia y se pierde cuando se enfría.</p>
           )}
         </div>
       </div>
-      <dl className="grid grid-cols-3 gap-3">
+      <dl className="grid grid-cols-3 gap-2">
         {tarjetas.map((tarjeta) => (
-          <div key={tarjeta.etiqueta} className="rounded-2xl bg-card px-3 py-4 ring-1 ring-foreground/10">
-            <dt className="text-xs leading-snug text-muted-foreground sm:text-sm">{tarjeta.etiqueta}</dt>
-            <dd className="mt-2 font-heading text-3xl tabular-nums">{tarjeta.valor}</dd>
+          <div key={tarjeta.etiqueta} className="rounded-[16px] border border-[#E2E8F0] bg-white px-2.5 py-3">
+            <dd className="text-2xl font-extrabold tracking-tight text-[#0F172A] tabular-nums">{tarjeta.valor}</dd>
+            <dt className="mt-1 text-[11px] leading-snug text-[#64748B]">{tarjeta.etiqueta}</dt>
           </div>
         ))}
       </dl>
-      <ul className="grid gap-2 sm:grid-cols-2">
+      <ul className="overflow-hidden rounded-[16px] border border-[#E2E8F0] bg-white">
         {TIPOS_REPORTE.map((tipo) => (
-          <li key={tipo} className="flex items-center justify-between rounded-xl bg-muted/70 px-3 py-2 text-sm">
-            <span>{ETIQUETA_TIPO[tipo]}</span>
-            <span className="font-semibold tabular-nums">{datos.porTipo[tipo]}</span>
+          <li key={tipo} className="flex items-center justify-between border-b border-[#E2E8F0] px-4 py-3 text-sm last:border-b-0">
+            <span className="text-[#0F172A]">{ETIQUETA_TIPO[tipo]}</span>
+            <span className="font-semibold text-[#0F172A] tabular-nums">{datos.porTipo[tipo]}</span>
           </li>
         ))}
       </ul>

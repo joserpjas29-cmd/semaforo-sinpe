@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Flag } from "lucide-react";
+import { CampoTelefono, presentarEntrada } from "@/components/campo-telefono";
+import { Encabezado } from "@/components/encabezado";
+import { clsBoton, clsEnlace, clsFoco } from "@/components/estilos";
 import { Recordatorio } from "@/components/recordatorio";
-import { Semaforo } from "@/components/semaforo";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ResultadoRiesgo, type LineaResultado } from "@/components/resultado-riesgo";
 import { NUMEROS_DEMO } from "@/lib/ejemplos";
+import { guardarHistorial } from "@/lib/historial-local";
 import { interpretarRespuesta } from "@/lib/mensaje-limite";
 import { formatearTelefono, normalizarTelefono } from "@/lib/telefono";
-import { ETIQUETA_TIPO, RECORDATORIO_ENVIO, TIPOS_REPORTE, type ResultadoNumero } from "@/lib/tipos";
+import { RECORDATORIO_ENVIO, type ResultadoNumero } from "@/lib/tipos";
+import { cn } from "@/lib/utils";
 
 interface Consulta extends ResultadoNumero {
   telefono: string;
@@ -20,9 +23,44 @@ interface Consulta extends ResultadoNumero {
   recordatorio: string;
 }
 
+const LLAMADO = {
+  rojo: "Mejor no le envíes plata ni des un producto por pagado.",
+  amarillo: "Andá con cuidado y verificá el nombre en tu banco antes de confirmar.",
+  verde: "Verde no es permiso para transferir. Confirmá en tu banco.",
+} as const;
+
+const PUNTO = {
+  rojo: "bg-[#DC2626]",
+  amarillo: "bg-[#F59E0B]",
+  verde: "bg-[#16A34A]",
+} as const;
+
+function lineasDe(resultado: Consulta): LineaResultado[] {
+  const lineas: LineaResultado[] = [];
+  if (resultado.conteo.total > 0) {
+    const cantidad = resultado.conteo.total;
+    lineas.push({
+      id: "total",
+      titulo: resultado.esEjemplo
+        ? cantidad === 1
+          ? "En la demo hay 1 reporte ficticio."
+          : `En la demo hay ${cantidad} reportes ficticios.`
+        : cantidad === 1
+          ? "Reportado 1 vez por la comunidad."
+          : `Reportado ${cantidad} veces por la comunidad.`,
+    });
+  }
+  resultado.razones.forEach((razon, indice) => {
+    lineas.push({ id: `razon-${indice}`, titulo: razon });
+  });
+  return lineas;
+}
+
 export function ConsultarForm({ numeroInicial = "" }: { numeroInicial?: string }) {
   const normalizadoInicial = normalizarTelefono(numeroInicial);
-  const [telefono, setTelefono] = useState(normalizadoInicial ? formatearTelefono(normalizadoInicial) : numeroInicial);
+  const [telefono, setTelefono] = useState(
+    normalizadoInicial ? formatearTelefono(normalizadoInicial) : presentarEntrada(numeroInicial),
+  );
   const [resultado, setResultado] = useState<Consulta | null>(null);
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -51,6 +89,14 @@ export function ConsultarForm({ numeroInicial = "" }: { numeroInicial?: string }
         return;
       }
       setResultado(leido.datos);
+      setTelefono(leido.datos.telefonoFormateado);
+      guardarHistorial({
+        tipo: "numero",
+        color: leido.datos.color,
+        titulo: leido.datos.titulo,
+        telefono: leido.datos.telefono,
+        puntaje: leido.datos.puntaje,
+      });
     } catch {
       setError("No hay conexión con la herramienta. Probá de nuevo.");
     } finally {
@@ -59,131 +105,96 @@ export function ConsultarForm({ numeroInicial = "" }: { numeroInicial?: string }
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-8">
-      <header className="space-y-2">
-        <p className="text-sm font-semibold tracking-[0.14em] text-primary uppercase">Antes de enviar</p>
-        <h1 className="font-heading text-4xl text-balance">Consultá el número</h1>
-        <p className="leading-relaxed text-muted-foreground">
-          Ingresá el celular al que le vas a hacer el SINPE. El semáforo sale de los reportes de
-          otras personas.
-        </p>
-      </header>
-
-      <Recordatorio texto={RECORDATORIO_ENVIO} titulo="Verificá el nombre en tu banco" />
+    <div className="flex min-h-full flex-1 flex-col">
+      <Encabezado titulo="Consultar número" texto="Ingresá el número a verificar." />
 
       <form
-        className="space-y-4"
+        className="mt-6 flex flex-1 flex-col"
+        aria-busy={cargando || undefined}
         onSubmit={(evento) => {
           evento.preventDefault();
           void consultar(telefono);
         }}
       >
-        <div className="space-y-2">
-          <Label htmlFor="telefono">Número de celular</Label>
-          <Input
-            id="telefono"
-            name="telefono"
-            inputMode="numeric"
-            autoComplete="tel"
-            placeholder="8888 0000"
-            value={telefono}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? "error-telefono" : "ayuda-telefono"}
-            onChange={(evento) => setTelefono(evento.target.value)}
-            className="h-12 px-3 text-base md:text-base"
-          />
-          <p id="ayuda-telefono" className="text-sm text-muted-foreground">
-            8 dígitos. Si lo copiás con +506, también sirve.
-          </p>
-        </div>
+        <label htmlFor="telefono" className="sr-only">
+          Número de celular
+        </label>
+        <CampoTelefono
+          id="telefono"
+          value={telefono}
+          onChange={setTelefono}
+          descritoPor={error ? "error-telefono" : "ayuda-telefono"}
+          invalido={Boolean(error)}
+        />
+        <p id="ayuda-telefono" className="mt-2 text-sm text-[#64748B]">
+          8 dígitos. Si lo pegás con +506, también sirve.
+        </p>
         {error && (
-          <p id="error-telefono" role="alert" className="text-sm font-medium text-destructive">
+          <p id="error-telefono" role="alert" className="mt-2 text-sm font-medium text-[#DC2626]">
             {error}
           </p>
         )}
-        <Button type="submit" disabled={cargando} className="h-12 w-full text-base">
-          {cargando ? "Consultando…" : "Ver el semáforo"}
-        </Button>
-      </form>
 
-      <div>
-        <p className="text-sm font-medium">Probá con un número ficticio</p>
-        <ul className="mt-2 flex flex-wrap gap-2">
+        <p className="mt-6 text-sm text-[#64748B]">Modo demo (datos de ejemplo)</p>
+        <ul className="mt-3 flex flex-wrap gap-2">
           {NUMEROS_DEMO.map((numero) => (
             <li key={numero.telefono}>
-              <Button
+              <button
                 type="button"
-                variant="outline"
-                className="h-10 bg-card"
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full border border-[#E2E8F0] bg-white py-1.5 pr-3 pl-2.5 text-sm font-medium text-[#0F172A]",
+                  clsFoco,
+                )}
+                aria-label={`${formatearTelefono(numero.telefono)}. ${numero.nota}`}
                 onClick={() => {
                   setTelefono(formatearTelefono(numero.telefono));
                   void consultar(numero.telefono);
                 }}
               >
+                <span className={cn("size-2 rounded-full", PUNTO[numero.color])} aria-hidden />
                 {formatearTelefono(numero.telefono)}
-              </Button>
+              </button>
             </li>
           ))}
         </ul>
-      </div>
 
-      {cargando && <Semaforo pulso titulo="Consultando la lista" detalle="Estamos juntando los reportes de este número." />}
+        <div className="mt-auto space-y-3 pt-8">
+          <Recordatorio texto={RECORDATORIO_ENVIO} titulo="Verificá el nombre en tu banco" />
+          <button type="submit" disabled={cargando} className={clsBoton}>
+            {cargando ? "Consultando…" : "Verificar"}
+          </button>
+        </div>
+      </form>
 
       {resultado && (
-        <section className="space-y-5 rounded-3xl bg-card p-5 ring-1 ring-foreground/10" aria-label="Resultado de la consulta">
-          {resultado.esEjemplo && (
-            <p className="rounded-full bg-muted px-3 py-1 text-center text-xs font-medium tracking-wide uppercase">
-              Dato ficticio de la demo
-            </p>
-          )}
-          <Semaforo color={resultado.color} titulo={resultado.titulo} detalle={resultado.explicacion} />
-          <p className="text-center text-sm text-muted-foreground">
-            Número consultado: <span className="font-semibold text-foreground">{resultado.telefonoFormateado}</span>
-            {" · "}
-            Índice de riesgo {resultado.puntaje}
-          </p>
-          {!resultado.pareceCelular && (
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Este número no parece celular. SINPE Móvil suele usar un número que empieza con 5, 6, 7 u 8.
-            </p>
-          )}
-          <Recordatorio texto={resultado.recordatorio} titulo="Verificá el nombre en tu banco" />
-          {resultado.conteo.total > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold">Qué hay en la lista</h3>
-              <ul className="mt-2 space-y-1 text-sm">
-                {TIPOS_REPORTE.filter((tipo) => resultado.conteo.porTipo[tipo] > 0).map((tipo) => (
-                  <li key={tipo} className="flex justify-between gap-3">
-                    <span>{ETIQUETA_TIPO[tipo]}</span>
-                    <span className="font-semibold tabular-nums">{resultado.conteo.porTipo[tipo]}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {resultado.conteo.ultimos30 === 1
-                  ? "1 reporte en los últimos 30 días."
-                  : `${resultado.conteo.ultimos30} reportes en los últimos 30 días.`}
-              </p>
-            </div>
-          )}
-          {resultado.razones.length > 0 && (
-            <ul className="space-y-2 text-sm leading-relaxed">
-              {resultado.razones.map((razon) => (
-                <li key={razon} className="rounded-xl bg-muted px-3 py-2">
-                  {razon}
-                </li>
-              ))}
-            </ul>
-          )}
-          <Button
-            render={<Link href={`/reportar?numero=${resultado.telefono}`} />}
-            nativeButton={false}
-            variant="outline"
-            className="h-12 w-full bg-card text-base"
-          >
-            Reportar este número
-          </Button>
-        </section>
+        <ResultadoRiesgo
+          color={resultado.color}
+          titulo={resultado.titulo}
+          explicacion={resultado.explicacion}
+          telefono={resultado.telefonoFormateado}
+          esEjemplo={resultado.esEjemplo}
+          indice={resultado.puntaje}
+          lineas={lineasDe(resultado)}
+          banner={LLAMADO[resultado.color]}
+          nota={resultado.recordatorio}
+          avisoExtra={
+            resultado.pareceCelular
+              ? undefined
+              : "Este número no parece celular. SINPE Móvil suele usar uno que empieza con 5, 6, 7 u 8."
+          }
+          onCerrar={() => setResultado(null)}
+          acciones={
+            <>
+              <Link href={`/reportar?numero=${resultado.telefono}`} className={clsBoton}>
+                <Flag className="size-4" aria-hidden />
+                Reportar este número
+              </Link>
+              <Link href="/" className={clsEnlace}>
+                Volver al inicio
+              </Link>
+            </>
+          }
+        />
       )}
     </div>
   );
