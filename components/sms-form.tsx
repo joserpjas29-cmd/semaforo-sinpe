@@ -18,9 +18,9 @@ const LLAMADO = {
 } as const;
 
 const PUNTO = {
-  rojo: "bg-[#DC2626]",
-  amarillo: "bg-[#F59E0B]",
-  verde: "bg-[#16A34A]",
+  rojo: "bg-riesgo-rojo",
+  amarillo: "bg-riesgo-amarillo",
+  verde: "bg-riesgo-verde",
 } as const;
 
 export function SmsForm() {
@@ -74,11 +74,15 @@ export function SmsForm() {
     resultado?.razones.map((razon, indice) => ({ id: `razon-${indice}`, titulo: razon })) ?? [];
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
+    <div className="mx-auto flex min-h-full w-full max-w-5xl flex-1 flex-col lg:min-h-0">
       <Encabezado titulo="Pegar SMS" texto="Pegá el mensaje que querés verificar." />
-      <p className="mt-3 text-sm leading-relaxed text-[#64748B]">{PRIVACIDAD_SMS}</p>
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{PRIVACIDAD_SMS}</p>
 
-      <form className="mt-5 flex flex-1 flex-col" onSubmit={analizar}>
+      <form
+        className="mt-5 flex flex-1 flex-col lg:grid lg:flex-none lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-8"
+        onSubmit={analizar}
+      >
+        <div>
         <label htmlFor="sms" className="sr-only">
           SMS del comprobante
         </label>
@@ -91,7 +95,7 @@ export function SmsForm() {
             setResultado(null);
           }}
           placeholder="Ej.: SINPE Móvil: Ha recibido ₡45.000 de MARIA ROJAS M. al 8888-6060. Ref: 2026100915342. Comprobante: bit.ly/xxxx"
-          className="min-h-[180px] w-full resize-none rounded-[20px] border border-[#E2E8F0] bg-white px-4 py-4 text-[15px] leading-relaxed text-[#0F172A] outline-none placeholder:text-[#94A3B8] focus-visible:border-[#1D4ED8]"
+          className="min-h-[180px] w-full resize-none rounded-[20px] border border-input bg-card px-4 py-4 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-link lg:min-h-[280px]"
           autoComplete="off"
         />
 
@@ -99,11 +103,11 @@ export function SmsForm() {
           type="button"
           onClick={() => void pegar()}
           className={cn(
-            "mt-3 inline-flex w-fit items-center gap-2 rounded-full border border-[#E2E8F0] bg-white px-4 py-2 text-sm font-medium text-[#0F172A]",
+            "mt-3 inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground",
             clsFoco,
           )}
         >
-          <Clipboard className="size-4 text-[#64748B]" aria-hidden />
+          <Clipboard className="size-4 text-muted-foreground" aria-hidden />
           Pegar del portapapeles
         </button>
 
@@ -125,18 +129,19 @@ export function SmsForm() {
             }}
             placeholder="Por ejemplo: me pidió que le devolviera la plata."
             aria-label="Nota, si querés contar el contexto"
-            className="mt-2 min-h-20 w-full resize-none rounded-[16px] border border-[#E2E8F0] bg-white px-4 py-3 text-[15px] leading-relaxed outline-none placeholder:text-[#94A3B8] focus-visible:border-[#1D4ED8]"
+            className="mt-2 min-h-20 w-full resize-none rounded-[16px] border border-input bg-card px-4 py-3 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-link"
             autoComplete="off"
           />
         )}
 
         {error && (
-          <p role="alert" className="mt-3 text-sm font-medium text-[#DC2626]">
+          <p role="alert" className="mt-3 text-sm font-medium text-destructive">
             {error}
           </p>
         )}
+        </div>
 
-        <div className="mt-auto space-y-3 pt-8">
+        <div className="mt-auto space-y-3 pt-8 lg:mt-0 lg:pt-0">
           <Recordatorio texto={AVISO_SMS} titulo="Esto no verifica el mensaje" />
           <button type="submit" disabled={!texto.trim()} className={clsBoton}>
             Analizar mensaje
@@ -153,7 +158,7 @@ export function SmsForm() {
                       type="button"
                       onClick={() => usarEjemplo(ejemplo)}
                       className={cn(
-                        "inline-flex items-center gap-2 rounded-full border border-[#E2E8F0] bg-white px-3 py-1.5 text-sm font-medium text-[#0F172A]",
+                        "inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground",
                         clsFoco,
                       )}
                     >
@@ -163,7 +168,7 @@ export function SmsForm() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs leading-relaxed text-[#94A3B8]">
+              <p className="text-xs leading-relaxed text-muted-foreground">
                 Textos ficticios de Banco Nacional, BCR y BAC. No son mensajes reales ni se conectan a un banco.
               </p>
             </>

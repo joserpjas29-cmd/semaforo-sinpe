@@ -30,9 +30,9 @@ const LLAMADO = {
 } as const;
 
 const PUNTO = {
-  rojo: "bg-[#DC2626]",
-  amarillo: "bg-[#F59E0B]",
-  verde: "bg-[#16A34A]",
+  rojo: "bg-riesgo-rojo",
+  amarillo: "bg-riesgo-amarillo",
+  verde: "bg-riesgo-verde",
 } as const;
 
 function lineasDe(resultado: Consulta): LineaResultado[] {
@@ -105,60 +105,62 @@ export function ConsultarForm({ numeroInicial = "" }: { numeroInicial?: string }
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
+    <div className="mx-auto flex min-h-full w-full max-w-5xl flex-1 flex-col lg:min-h-0">
       <Encabezado titulo="Consultar número" texto="Ingresá el número a verificar." />
 
       <form
-        className="mt-6 flex flex-1 flex-col"
+        className="mt-6 flex flex-1 flex-col lg:grid lg:flex-none lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-8"
         aria-busy={cargando || undefined}
         onSubmit={(evento) => {
           evento.preventDefault();
           void consultar(telefono);
         }}
       >
-        <label htmlFor="telefono" className="sr-only">
-          Número de celular
-        </label>
-        <CampoTelefono
-          id="telefono"
-          value={telefono}
-          onChange={setTelefono}
-          descritoPor={error ? "error-telefono" : "ayuda-telefono"}
-          invalido={Boolean(error)}
-        />
-        <p id="ayuda-telefono" className="mt-2 text-sm text-[#64748B]">
-          8 dígitos. Si lo pegás con +506, también sirve.
-        </p>
-        {error && (
-          <p id="error-telefono" role="alert" className="mt-2 text-sm font-medium text-[#DC2626]">
-            {error}
+        <div>
+          <label htmlFor="telefono" className="sr-only">
+            Número de celular
+          </label>
+          <CampoTelefono
+            id="telefono"
+            value={telefono}
+            onChange={setTelefono}
+            descritoPor={error ? "error-telefono" : "ayuda-telefono"}
+            invalido={Boolean(error)}
+          />
+          <p id="ayuda-telefono" className="mt-2 text-sm text-muted-foreground">
+            8 dígitos. Si lo pegás con +506, también sirve.
           </p>
-        )}
+          {error && (
+            <p id="error-telefono" role="alert" className="mt-2 text-sm font-medium text-destructive">
+              {error}
+            </p>
+          )}
 
-        <p className="mt-6 text-sm text-[#64748B]">Modo demo (datos de ejemplo)</p>
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {NUMEROS_DEMO.map((numero) => (
-            <li key={numero.telefono}>
-              <button
-                type="button"
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-full border border-[#E2E8F0] bg-white py-1.5 pr-3 pl-2.5 text-sm font-medium text-[#0F172A]",
-                  clsFoco,
-                )}
-                aria-label={`${formatearTelefono(numero.telefono)}. ${numero.nota}`}
-                onClick={() => {
-                  setTelefono(formatearTelefono(numero.telefono));
-                  void consultar(numero.telefono);
-                }}
-              >
-                <span className={cn("size-2 rounded-full", PUNTO[numero.color])} aria-hidden />
-                {formatearTelefono(numero.telefono)}
-              </button>
-            </li>
-          ))}
-        </ul>
+          <p className="mt-6 text-sm text-muted-foreground">Modo demo (datos de ejemplo)</p>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {NUMEROS_DEMO.map((numero) => (
+              <li key={numero.telefono}>
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border border-border bg-card py-1.5 pr-3 pl-2.5 text-sm font-medium text-foreground",
+                    clsFoco,
+                  )}
+                  aria-label={`${formatearTelefono(numero.telefono)}. ${numero.nota}`}
+                  onClick={() => {
+                    setTelefono(formatearTelefono(numero.telefono));
+                    void consultar(numero.telefono);
+                  }}
+                >
+                  <span className={cn("size-2 rounded-full", PUNTO[numero.color])} aria-hidden />
+                  {formatearTelefono(numero.telefono)}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
 
-        <div className="mt-auto space-y-3 pt-8">
+        <div className="mt-auto space-y-3 pt-8 lg:mt-0 lg:pt-0">
           <Recordatorio texto={RECORDATORIO_ENVIO} titulo="Verificá el nombre en tu banco" />
           <button type="submit" disabled={cargando} className={clsBoton}>
             {cargando ? "Consultando…" : "Verificar"}

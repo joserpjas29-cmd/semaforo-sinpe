@@ -8,11 +8,26 @@ import { cn } from "@/lib/utils";
 
 const TEMA: Record<
   ColorSemaforo,
-  { texto: string; fondo: string; icono: typeof ShieldAlert; linea: typeof X }
+  { superficie: string; titulo: string; icono: typeof ShieldAlert; linea: typeof X }
 > = {
-  rojo: { texto: "#DC2626", fondo: "#FEE2E2", icono: ShieldAlert, linea: X },
-  amarillo: { texto: "#D97706", fondo: "#FEF3C7", icono: TriangleAlert, linea: Minus },
-  verde: { texto: "#16A34A", fondo: "#DCFCE7", icono: ShieldCheck, linea: Check },
+  rojo: {
+    superficie: "bg-riesgo-rojo-fondo text-riesgo-rojo-texto",
+    titulo: "text-riesgo-rojo-texto",
+    icono: ShieldAlert,
+    linea: X,
+  },
+  amarillo: {
+    superficie: "bg-riesgo-amarillo-fondo text-riesgo-amarillo-texto",
+    titulo: "text-riesgo-amarillo-texto",
+    icono: TriangleAlert,
+    linea: Minus,
+  },
+  verde: {
+    superficie: "bg-riesgo-verde-fondo text-riesgo-verde-texto",
+    titulo: "text-riesgo-verde-texto",
+    icono: ShieldCheck,
+    linea: Check,
+  },
 };
 
 export interface LineaResultado {
@@ -77,88 +92,79 @@ export function ResultadoRiesgo({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-40 overflow-y-auto bg-[#F8FAFC] md:bg-[#E7EDF5]">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-background lg:bg-black/50 lg:px-8 lg:py-10">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="titulo-resultado"
-        className="mx-auto flex min-h-full w-full max-w-[430px] flex-col bg-[#F8FAFC] px-5 pt-4 pb-10 md:my-6 md:min-h-[calc(100dvh-3rem)] md:rounded-[32px] md:ring-1 md:ring-[#E2E8F0]"
+        className="mx-auto flex min-h-full w-full max-w-2xl flex-col bg-background px-5 pt-4 pb-10 lg:min-h-0 lg:rounded-[28px] lg:bg-card lg:px-8 lg:py-8 lg:ring-1 lg:ring-border"
       >
         <button
           type="button"
           data-cerrar
           onClick={onCerrar}
           aria-label="Cerrar resultado"
-          className={cn("flex size-10 items-center justify-center rounded-full text-[#0F172A]", clsFoco)}
+          className={cn("flex size-10 items-center justify-center rounded-full text-foreground", clsFoco)}
         >
           <X className="size-5" />
         </button>
 
         <div className="mt-6 flex flex-col items-center text-center" role="status">
-          <span
-            className="flex size-[88px] items-center justify-center rounded-full"
-            style={{ background: tema.fondo, color: tema.texto }}
-          >
+          <span className={cn("flex size-[88px] items-center justify-center rounded-full", tema.superficie)}>
             <Icono className="size-10" aria-hidden />
           </span>
-          <h2 id="titulo-resultado" className="mt-5 text-[26px] font-extrabold tracking-[-0.03em]" style={{ color: tema.texto }}>
+          <h2 id="titulo-resultado" className={cn("mt-5 text-[26px] font-extrabold tracking-[-0.03em] lg:text-3xl", tema.titulo)}>
             {titulo}
           </h2>
-          <p className="mt-2 max-w-[320px] text-[15px] leading-relaxed text-[#64748B]">{explicacion}</p>
+          <p className="mt-2 max-w-md text-[15px] leading-relaxed text-muted-foreground">{explicacion}</p>
           {telefono && (
-            <p className="mt-4 rounded-full bg-[#F1F5F9] px-3 py-1 text-sm font-semibold text-[#334155]">+506 {telefono}</p>
+            <p className="mt-4 rounded-full border border-border bg-muted px-3 py-1 text-sm font-semibold text-foreground">+506 {telefono}</p>
           )}
           {esEjemplo && (
-            <p className="mt-3 rounded-full bg-[#F1F5F9] px-3 py-1 text-[11px] font-semibold tracking-wide text-[#64748B] uppercase">
+            <p className="mt-3 rounded-full border border-border bg-muted px-3 py-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
               Dato ficticio de la demo
             </p>
           )}
           {indice != null && (
-            <p className="mt-3 text-sm text-[#64748B]">
-              Índice de riesgo: <span className="font-semibold text-[#0F172A] tabular-nums">{indice}</span>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Índice de riesgo: <span className="font-semibold text-foreground tabular-nums">{indice}</span>
               <span className="mt-0.5 block text-xs">No es un porcentaje. Sale del peso de los reportes.</span>
             </p>
           )}
         </div>
 
-        {avisoExtra && <p className="mt-4 text-center text-sm leading-relaxed text-[#64748B]">{avisoExtra}</p>}
+        {avisoExtra && <p className="mt-4 text-center text-sm leading-relaxed text-muted-foreground">{avisoExtra}</p>}
 
         {lineas.length > 0 && (
-          <ul className="mt-6 space-y-3">
+          <ul className="mx-auto mt-6 w-full max-w-lg space-y-3">
             {lineas.map((linea) => (
               <li key={linea.id} className="flex items-start gap-3">
-                <span
-                  className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full"
-                  style={{ background: tema.fondo, color: tema.texto }}
-                >
+                <span className={cn("mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full", tema.superficie)}>
                   <IconoLinea className="size-3.5" aria-hidden />
                 </span>
-                <span className="min-w-0 text-[15px] leading-snug text-[#0F172A]">
+                <span className="min-w-0 text-[15px] leading-snug text-foreground">
                   {linea.etiqueta && (
-                    <span className="mb-0.5 block text-[11px] font-semibold tracking-wide uppercase" style={{ color: tema.texto }}>
+                    <span className={cn("mb-0.5 block text-[11px] font-semibold tracking-wide uppercase", tema.titulo)}>
                       {linea.etiqueta}
                     </span>
                   )}
                   <span className="block">{linea.titulo}</span>
-                  {linea.detalle && <span className="mt-0.5 block text-sm leading-relaxed text-[#64748B]">{linea.detalle}</span>}
+                  {linea.detalle && <span className="mt-0.5 block text-sm leading-relaxed text-muted-foreground">{linea.detalle}</span>}
                 </span>
               </li>
             ))}
           </ul>
         )}
 
-        {extra && <div className="mt-6">{extra}</div>}
+        {extra && <div className="mx-auto mt-6 w-full max-w-lg">{extra}</div>}
 
-        <p
-          className="mt-6 rounded-[16px] px-4 py-3 text-center text-[15px] font-medium"
-          style={{ background: tema.fondo, color: tema.texto }}
-        >
+        <p className={cn("mx-auto mt-6 w-full max-w-lg rounded-[16px] px-4 py-3 text-center text-[15px] font-medium", tema.superficie)}>
           {banner}
         </p>
-        {nota && <p className="mt-3 text-center text-[13px] leading-relaxed text-[#64748B]">{nota}</p>}
+        {nota && <p className="mx-auto mt-3 max-w-lg text-center text-[13px] leading-relaxed text-muted-foreground">{nota}</p>}
 
-        <div className="mt-6 flex flex-col items-center gap-4">{acciones}</div>
+        <div className="mx-auto mt-6 flex w-full max-w-lg flex-col items-center gap-4">{acciones}</div>
       </div>
     </div>
   );

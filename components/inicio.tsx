@@ -74,8 +74,9 @@ export function Inicio() {
     <>
       {bienvenida && <Bienvenida onContinuar={ocultarBienvenida} />}
       <div className={bienvenida ? "contents" : undefined} inert={bienvenida ? true : undefined}>
-      <header className="flex items-center justify-between">
-        <Marca />
+      <header className="flex items-center justify-between gap-4">
+        <Marca className="lg:hidden" />
+        <p className="hidden text-sm text-muted-foreground lg:block">Elegí cómo querés revisar antes de transferir.</p>
         <div className="flex items-center gap-3">
           <Puntos />
           <button
@@ -84,7 +85,7 @@ export function Inicio() {
             aria-controls="panel-acerca"
             onClick={() => setMenu(true)}
             className={cn(
-              "flex size-10 items-center justify-center rounded-full border border-[#E2E8F0] bg-white text-[#0F172A]",
+              "flex size-10 items-center justify-center rounded-full border border-border bg-card text-foreground",
               clsFoco,
             )}
           >
@@ -94,13 +95,13 @@ export function Inicio() {
         </div>
       </header>
 
-      <section className="mt-10 text-center">
-        <ShieldCheck className="mx-auto size-12 text-[#0D9488]" strokeWidth={1.6} aria-hidden />
-        <h1 className="mt-4 text-[28px] font-extrabold tracking-[-0.03em] text-[#0F172A]">Protege tu SINPE.</h1>
-        <p className="mt-1 text-[15px] text-[#64748B]">Elegí una opción para comenzar</p>
+      <section className="mt-10 text-center lg:mt-8 lg:text-left">
+        <ShieldCheck className="mx-auto size-12 text-accent-foreground lg:mx-0" strokeWidth={1.6} aria-hidden />
+        <h1 className="mt-4 text-[28px] font-extrabold tracking-[-0.03em] text-foreground lg:text-4xl">Protege tu SINPE.</h1>
+        <p className="mt-1 text-[15px] text-muted-foreground">Elegí una opción para comenzar</p>
       </section>
 
-      <ul className="mt-6 grid grid-cols-2 gap-3">
+      <ul className="mt-6 grid grid-cols-2 gap-3 lg:mt-8 lg:grid-cols-4 lg:gap-4">
         {OPCIONES.map((opcion) => {
           const Icono = opcion.icono;
           return (
@@ -108,22 +109,22 @@ export function Inicio() {
               <Link
                 href={opcion.href}
                 className={cn(
-                  "flex min-h-[156px] flex-col rounded-[22px] border border-[#E2E8F0] bg-white p-4 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)]",
+                  "flex min-h-[156px] flex-col rounded-[22px] border border-border bg-card p-4 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)]",
                   clsFoco,
                 )}
               >
-                <span className="flex size-11 items-center justify-center rounded-2xl bg-[#CCFBF1] text-[#0D9488]">
+                <span className="flex size-11 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
                   <Icono className="size-5" aria-hidden />
                 </span>
-                <span className="mt-auto pt-6 text-[16px] font-bold tracking-tight text-[#0F172A]">{opcion.titulo}</span>
-                <span className="mt-0.5 text-[13px] text-[#64748B]">{opcion.texto}</span>
+                <span className="mt-auto pt-6 text-[16px] font-bold tracking-tight text-foreground">{opcion.titulo}</span>
+                <span className="mt-0.5 text-[13px] text-muted-foreground">{opcion.texto}</span>
               </Link>
             </li>
           );
         })}
       </ul>
 
-      <p className="mt-6 text-center text-[12px] leading-relaxed text-[#94A3B8]">
+      <p className="mt-6 text-center text-[12px] leading-relaxed text-muted-foreground lg:text-left">
         Stopfy nació como Semáforo SINPE. No está afiliado a ningún banco ni al BCCR, y no entra a tu cuenta.
       </p>
 
@@ -143,29 +144,29 @@ function MenuAcerca({ onCerrar }: { onCerrar: () => void }) {
   }, [onCerrar]);
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-[#0F172A]/40 p-4 md:items-center" onClick={onCerrar}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center" onClick={onCerrar}>
       <div
         id="panel-acerca"
         role="dialog"
         aria-modal="true"
         aria-labelledby="titulo-acerca"
-        className="w-full max-w-[398px] rounded-[24px] bg-white p-5 shadow-xl"
+        className="w-full max-w-md rounded-[24px] bg-card p-5 shadow-xl"
         onClick={(evento) => evento.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
-          <h2 id="titulo-acerca" className="text-lg font-extrabold tracking-tight text-[#0F172A]">
+          <h2 id="titulo-acerca" className="text-lg font-extrabold tracking-tight text-foreground">
             Acerca de Stopfy
           </h2>
           <button
             type="button"
             onClick={onCerrar}
             aria-label="Cerrar"
-            className={cn("flex size-9 items-center justify-center rounded-full text-[#64748B]", clsFoco)}
+            className={cn("flex size-9 items-center justify-center rounded-full text-muted-foreground", clsFoco)}
           >
             <X className="size-5" />
           </button>
         </div>
-        <div className="mt-3 space-y-3 text-sm leading-relaxed text-[#64748B]">
+        <div className="mt-3 space-y-3 text-sm leading-relaxed text-muted-foreground">
           <p>
             Stopfy nació como Semáforo SINPE. Junta reportes de la gente y revisa un comprobante o un SMS antes de
             que sueltes la plata.

@@ -15,11 +15,15 @@ Stopfy junta reportes de la gente para el primer caso, lee la captura en la mism
 
 ## Interfaz
 
-La marca visible es **Stopfy** (nació como Semáforo SINPE). El fondo es claro, el botón principal es azul y el verde, el amarillo y el rojo se usan solo para el riesgo.
+La marca visible es **Stopfy** (nació como Semáforo SINPE). El botón principal es azul y el verde, el amarillo y el rojo se usan solo para el riesgo.
+
+El tema sigue la preferencia del sistema (`prefers-color-scheme`) hasta que la persona elige Claro, Oscuro o Sistema. Esa elección se guarda en `localStorage` (`stopfy-tema`) y un script en el `<head>` la aplica antes de pintar, para que no parpadee. En el modo oscuro el fondo es azul noche (`#0F172A` / `#020617`), el texto es claro, el botón sigue azul con texto blanco y los íconos van en verde agua. El semáforo no se usa para decorar.
+
+En el celular la barra de Inicio, Historial y Ayuda queda abajo, flotante. Desde una pantalla grande (1024 px) esa barra se esconde y aparece un menú lateral con Consultar, Comprobante, SMS, Reportar, Historial y Ayuda. El inicio pasa de dos columnas a cuatro, y los formularios se acomodan en dos columnas.
 
 La bienvenida no pide «tu número SINPE Móvil». Pedirlo guardaría el celular de quien usa la app, y hoy ese dato no se recoge: solo se consulta o se reporta el número de la otra persona, cifrado. La pantalla es un saludo y un continuar.
 
-El inicio es una cuadrícula: Consultar, Comprobante, SMS y Reportar. Abajo hay una barra con Inicio, Historial y Ayuda.
+El inicio es una cuadrícula: Consultar, Comprobante, SMS y Reportar.
 
 El resultado muestra el título que calcula la app, las razones reales y el índice de riesgo. Ese índice no es un porcentaje: puede pasar de 100. No se inventan señales como «número creado recientemente en SINPE» o «el nombre no coincide con el titular», porque la app no tiene esos datos.
 

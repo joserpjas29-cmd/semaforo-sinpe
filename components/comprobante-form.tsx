@@ -139,13 +139,17 @@ export function ComprobanteForm() {
         : [];
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
+    <div className="mx-auto flex min-h-full w-full max-w-5xl flex-1 flex-col lg:min-h-0">
       <Encabezado
         titulo="Comprobante"
         texto="Subí una imagen del comprobante que querés verificar."
       />
 
-      <form className="mt-6 flex flex-1 flex-col" onSubmit={(evento) => void analizar(evento)}>
+      <form
+        className="mt-6 flex flex-1 flex-col lg:grid lg:flex-none lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start lg:gap-8"
+        onSubmit={(evento) => void analizar(evento)}
+      >
+        <div>
         <input
           ref={inputRef}
           id="imagen"
@@ -162,7 +166,7 @@ export function ComprobanteForm() {
           onDragOver={(evento) => evento.preventDefault()}
           onDrop={soltar}
           className={cn(
-            "flex min-h-[260px] w-full flex-col items-center justify-center rounded-[24px] border border-dashed border-[#CBD5E1] bg-white px-6 py-8 text-center",
+            "flex min-h-[260px] w-full flex-col items-center justify-center rounded-[24px] border border-dashed border-border bg-card px-6 py-8 text-center",
             clsFoco,
           )}
         >
@@ -170,22 +174,22 @@ export function ComprobanteForm() {
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={preview} alt="Vista previa del comprobante que se va a analizar" className="max-h-48 rounded-xl object-contain" />
-              <span className="mt-3 text-sm font-semibold text-[#0F172A]">{archivo?.name}</span>
-              <span className="mt-1 text-sm text-[#64748B]">Tocá para cambiar la imagen</span>
+              <span className="mt-3 text-sm font-semibold text-foreground">{archivo?.name}</span>
+              <span className="mt-1 text-sm text-muted-foreground">Tocá para cambiar la imagen</span>
             </>
           ) : (
             <>
-              <ImageIcon className="size-10 text-[#0D9488]" strokeWidth={1.6} aria-hidden />
-              <span className="mt-4 text-base font-bold text-[#0F172A]">Seleccionar imagen</span>
-              <span className="mt-1 text-sm text-[#64748B]">JPG, PNG o WebP</span>
-              <span className="mt-1 text-sm text-[#94A3B8]">Tocá para elegir desde tu galería</span>
+              <ImageIcon className="size-10 text-accent-foreground" strokeWidth={1.6} aria-hidden />
+              <span className="mt-4 text-base font-bold text-foreground">Seleccionar imagen</span>
+              <span className="mt-1 text-sm text-muted-foreground">JPG, PNG o WebP</span>
+              <span className="mt-1 text-sm text-muted-foreground">Tocá para elegir desde tu galería</span>
             </>
           )}
         </button>
 
         {archivo && (
           <div className="mt-4 space-y-2">
-            <label htmlFor="mensaje" className="text-sm font-semibold text-[#0F172A]">
+            <label htmlFor="mensaje" className="text-sm font-semibold text-foreground">
               Mensaje del cliente (opcional)
             </label>
             <textarea
@@ -194,7 +198,7 @@ export function ComprobanteForm() {
               value={mensaje}
               onChange={(evento) => setMensaje(evento.target.value)}
               placeholder="Pegá acá el texto del chat, si te escribió algo."
-              className="min-h-24 w-full resize-none rounded-[16px] border border-[#E2E8F0] bg-white px-4 py-3 text-[15px] leading-relaxed text-[#0F172A] outline-none placeholder:text-[#94A3B8] focus-visible:border-[#1D4ED8]"
+              className="min-h-24 w-full resize-none rounded-[16px] border border-input bg-card px-4 py-3 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-link"
             />
             <div className="flex flex-wrap gap-2">
               {MENSAJES_DEMO.map((muestra) => (
@@ -203,7 +207,7 @@ export function ComprobanteForm() {
                   type="button"
                   onClick={() => setMensaje(muestra.texto)}
                   className={cn(
-                    "rounded-full border border-[#E2E8F0] bg-white px-3 py-1.5 text-sm font-medium text-[#0F172A]",
+                    "rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground",
                     clsFoco,
                   )}
                 >
@@ -215,12 +219,13 @@ export function ComprobanteForm() {
         )}
 
         {error && (
-          <p role="alert" className="mt-3 text-sm font-medium text-[#DC2626]">
+          <p role="alert" className="mt-3 text-sm font-medium text-destructive">
             {error}
           </p>
         )}
+        </div>
 
-        <div className="mt-auto space-y-3 pt-8">
+        <div className="mt-auto space-y-3 pt-8 lg:mt-0 lg:pt-0">
           <Recordatorio texto={RECORDATORIO_RECIBO} titulo="Confirmá el depósito en tu banco" />
           {archivo ? (
             <button type="submit" disabled={cargando} className={clsBoton}>
@@ -233,7 +238,7 @@ export function ComprobanteForm() {
             </button>
           )}
           {cargando && (
-            <p className="text-center text-sm text-[#64748B]">
+            <p className="text-center text-sm text-muted-foreground">
               La primera vez tarda un toque más, porque el lector de texto arranca en esta máquina.
             </p>
           )}
@@ -248,20 +253,20 @@ export function ComprobanteForm() {
                     type="button"
                     onClick={() => void usarEjemplo(ejemplo.src, ejemplo.archivo)}
                     className={cn(
-                      "flex w-full items-start gap-3 rounded-[16px] border border-[#E2E8F0] bg-white p-3 text-left",
+                      "flex w-full items-start gap-3 rounded-[16px] border border-border bg-card p-3 text-left",
                       clsFoco,
                     )}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={ejemplo.src} alt="" className="h-16 w-12 rounded-md object-cover object-top" />
                     <span>
-                      <span className="block text-sm font-semibold text-[#0F172A]">{ejemplo.titulo}</span>
-                      <span className="mt-0.5 block text-sm text-[#64748B]">{ejemplo.detalle}</span>
+                      <span className="block text-sm font-semibold text-foreground">{ejemplo.titulo}</span>
+                      <span className="mt-0.5 block text-sm text-muted-foreground">{ejemplo.detalle}</span>
                     </span>
                   </button>
                 </li>
               ))}
-              <li className="text-xs leading-relaxed text-[#94A3B8]">Imágenes ficticias. No son comprobantes reales.</li>
+              <li className="text-xs leading-relaxed text-muted-foreground">Imágenes ficticias. No son comprobantes reales.</li>
             </ul>
           )}
         </div>
@@ -277,37 +282,37 @@ export function ComprobanteForm() {
           nota={resultado.recordatorio}
           onCerrar={() => setResultado(null)}
           extra={
-            <div className="rounded-[16px] border border-[#E2E8F0] bg-white p-4">
-              <h3 className="text-sm font-semibold text-[#0F172A]">Lo que se pudo leer</h3>
+            <div className="rounded-[16px] border border-border bg-card p-4">
+              <h3 className="text-sm font-semibold text-foreground">Lo que se pudo leer</h3>
               <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <dt className="text-[#64748B]">Monto</dt>
-                  <dd className="font-medium text-[#0F172A]">{datos.monto == null ? "No se leyó" : formatearColones(datos.monto)}</dd>
+                  <dt className="text-muted-foreground">Monto</dt>
+                  <dd className="font-medium text-foreground">{datos.monto == null ? "No se leyó" : formatearColones(datos.monto)}</dd>
                 </div>
                 <div>
-                  <dt className="text-[#64748B]">Fecha y hora</dt>
-                  <dd className="font-medium text-[#0F172A]">
+                  <dt className="text-muted-foreground">Fecha y hora</dt>
+                  <dd className="font-medium text-foreground">
                     {[datos.fechaTexto, datos.horaTexto].filter(Boolean).join(" · ") || "No se leyó"}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[#64748B]">Referencia</dt>
-                  <dd className="font-medium break-all text-[#0F172A]">{datos.referencia ?? "No se leyó"}</dd>
+                  <dt className="text-muted-foreground">Referencia</dt>
+                  <dd className="font-medium break-all text-foreground">{datos.referencia ?? "No se leyó"}</dd>
                 </div>
                 <div>
-                  <dt className="text-[#64748B]">Banco</dt>
-                  <dd className="font-medium text-[#0F172A]">{datos.bancos.length ? datos.bancos.join(", ") : "No se leyó"}</dd>
+                  <dt className="text-muted-foreground">Banco</dt>
+                  <dd className="font-medium text-foreground">{datos.bancos.length ? datos.bancos.join(", ") : "No se leyó"}</dd>
                 </div>
                 <div>
-                  <dt className="text-[#64748B]">De</dt>
-                  <dd className="font-medium text-[#0F172A]">{datos.nombreOrigen ?? "No se leyó"}</dd>
+                  <dt className="text-muted-foreground">De</dt>
+                  <dd className="font-medium text-foreground">{datos.nombreOrigen ?? "No se leyó"}</dd>
                 </div>
                 <div>
-                  <dt className="text-[#64748B]">Para</dt>
-                  <dd className="font-medium text-[#0F172A]">{datos.nombreDestino ?? "No se leyó"}</dd>
+                  <dt className="text-muted-foreground">Para</dt>
+                  <dd className="font-medium text-foreground">{datos.nombreDestino ?? "No se leyó"}</dd>
                 </div>
               </dl>
-              <p className="mt-3 text-xs leading-relaxed text-[#64748B]">
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                 {textoLectura(resultado.fuente, resultado.visionDisponible, datos.confianza)}
               </p>
             </div>
