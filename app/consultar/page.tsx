@@ -3,7 +3,7 @@ import { ConsultarForm } from "@/components/consultar-form";
 
 export const metadata: Metadata = {
   title: "Consultar número",
-  description: "Consultá un celular de Costa Rica antes de enviar un SINPE Móvil.",
+  description: "Consultá un celular de Costa Rica antes de enviar un SINPE Móvil. Stopfy te muestra el índice de los reportes, no un porcentaje inventado.",
 };
 
 export default async function PaginaConsultar({

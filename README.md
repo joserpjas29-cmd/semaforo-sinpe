@@ -1,6 +1,6 @@
-# Semáforo SINPE
+# Stopfy
 
-Herramienta web para frenar estafas con SINPE Móvil en Costa Rica: números reciclados y comprobantes falsos. El semáforo no realiza transacciones ni accede a su cuenta de banco. Sirve para mirar dos veces antes de soltar la plata o de dar un producto por pagado.
+Herramienta web para frenar estafas con SINPE Móvil en Costa Rica: números reciclados y comprobantes falsos. Nació como Semáforo SINPE. El semáforo no realiza transacciones ni accede a tu cuenta de banco. Sirve para mirar dos veces antes de soltar la plata o de dar un producto por pagado.
 
 No está afiliada a ningún banco ni al Banco Central de Costa Rica. No usa logos ni marcas oficiales.
 
@@ -11,7 +11,23 @@ SINPE Móvil es instantáneo. También lo es la estafa. Dos patrones se repiten:
 1. **Antes de enviar.** El número era de otra persona (un chip reciclado) o ya lo reportaron por pedir devoluciones y mandar comprobantes que no cuadran. El banco muestra el nombre del beneficiario, pero en el apuro mucha gente no lo lee.
 2. **Al recibir.** El cliente manda una captura. La plata no está en la cuenta. El mensaje dice «me equivoqué, devuélvame ya». Si devolvés, estás regalando plata de tu bolsillo.
 
-Semáforo SINPE junta reportes de la gente para el primer caso, lee la captura en la misma máquina para el segundo, y revisa un SMS de comprobante en el navegador sin guardarlo.
+Stopfy junta reportes de la gente para el primer caso, lee la captura en la misma máquina para el segundo, y revisa un SMS de comprobante en el navegador sin guardarlo.
+
+## Interfaz
+
+La marca visible es **Stopfy** (nació como Semáforo SINPE). El fondo es claro, el botón principal es azul y el verde, el amarillo y el rojo se usan solo para el riesgo.
+
+La bienvenida no pide «tu número SINPE Móvil». Pedirlo guardaría el celular de quien usa la app, y hoy ese dato no se recoge: solo se consulta o se reporta el número de la otra persona, cifrado. La pantalla es un saludo y un continuar.
+
+El inicio es una cuadrícula: Consultar, Comprobante, SMS y Reportar. Abajo hay una barra con Inicio, Historial y Ayuda.
+
+El resultado muestra el título que calcula la app, las razones reales y el índice de riesgo. Ese índice no es un porcentaje: puede pasar de 100. No se inventan señales como «número creado recientemente en SINPE» o «el nombre no coincide con el titular», porque la app no tiene esos datos.
+
+El historial vive en `localStorage` de este navegador. No se manda al servidor. No guarda el texto del SMS ni la foto del comprobante, solo el color, el título y, si fue un número, el celular y el índice.
+
+La ayuda explica el semáforo, la privacidad y cómo reportar. No hay un correo de soporte: no se inventó uno.
+
+En Reportar los tipos siguen siendo los de siempre (comprobante falso, número reciclado, pidió devolución, otro). El comentario hace falta: el servidor pide una frase de al menos 12 caracteres.
 
 ## Cómo funciona
 
@@ -68,7 +84,7 @@ Es una revisión educativa. No se conecta a ningún banco y no puede probar que 
 
 Rojo: sospechoso. Amarillo: no está claro. Verde: se ve normal. El verde no prueba que el comprobante sea real.
 
-En la pantalla hay seis SMS ficticios. Un toque llena el texto. Están marcados por luz y banco:
+En «Usar mensaje de ejemplo» hay seis SMS ficticios. Un toque llena el texto y muestra el resultado. Están marcados por luz y banco:
 
 - **Verde:** Banco Nacional y BCR, con monto, referencia y fecha u hora, sin enlaces ni apuro.
 - **Amarillo:** Banco Nacional sin monto ni referencia, y un BAC con una redacción que no cierra.
@@ -142,13 +158,14 @@ Capturas en `public/ejemplos/`:
 - `comprobante-precaucion.png`: menciona un banco pero no dice SINPE. Sale amarillo.
 - `comprobante-sospechoso.png`: fecha 31/02, hora 25:99, dos montos, dos bancos y referencia `12`. Sale rojo.
 
-En la pantalla del comprobante hay dos mensajes de ejemplo. El normal no cambia un comprobante verde. El de «me equivoqué, devuélvame» lo pone en rojo aunque la captura se vea bien.
+En «Usar comprobante de ejemplo» están las tres capturas. Al elegir una, aparecen dos mensajes de ejemplo. El normal no cambia un comprobante verde. El de «me equivoqué, devuélvame» lo pone en rojo aunque la captura se vea bien.
 
 ## Arquitectura
 
-- Next.js (App Router), TypeScript y Tailwind. Los botones, campos y tarjetas usan shadcn/ui. Node 22.
+- Next.js (App Router), TypeScript, Tailwind e Inter. Node 22.
 - Reportes: SQLite local con `node:sqlite` si no hay variables de Turso (`data/semaforo.sqlite`). En Vercel, [Turso](https://turso.tech) por HTTP (`@libsql/client/web`) cuando están `TURSO_DATABASE_URL` y `TURSO_AUTH_TOKEN`. Si en Vercel no hay base, la semilla vive en memoria y la demo abre igual.
-- Rutas: `POST /api/consultar`, `POST /api/reportar`, `POST /api/analizar`, `GET /api/estadisticas`.
+- Rutas de pantalla: `/`, `/consultar`, `/comprobante`, `/sms`, `/reportar`, `/historial`, `/ayuda`.
+- Rutas de API: `POST /api/consultar`, `POST /api/reportar`, `POST /api/analizar`, `GET /api/estadisticas`. El historial no tiene API.
 - La lógica de puntaje (`lib/semaforo.ts`) y las heurísticas (`lib/comprobante.ts`) son funciones puras, cubiertas por Vitest. Un test corre el OCR sobre las tres imágenes. Otro comprueba el texto de respaldo y la semilla en memoria y en SQLite.
 - El OCR vive en el servidor (`lib/ocr.ts`). El archivo de idioma español va en el repo. La función de análisis pide hasta 60 segundos. El lector se rinde a los 25 y deja un resultado, no un error 500.
 
@@ -194,8 +211,9 @@ También se puede instalar Vercel desde la pestaña Apps del repo en Origin. Cad
 
 ### 3. Qué revisar en el celular
 
-- Inicio: los cuatro números de la demo y el panel de reportes (6, con la nota de ejemplos ficticios).
-- `6060 3030` en rojo, `7070 2020` en amarillo, `8881 0001` y `5111 9090` en verde.
+- Inicio: la cuadrícula Consultar, Comprobante, SMS y Reportar. La bienvenida no pide tu número.
+- En Consultar, modo demo: `6060 3030` en rojo, `7070 2020` en amarillo, `8881 0001` y `5111 9090` en verde. El resultado muestra razones reales y el índice, no un porcentaje.
+- Historial: después de consultar, la lista queda en este navegador. Ayuda: las preguntas y la lista colectiva, sin un correo inventado.
 - En Comprobante, las tres capturas de ejemplo. Esas no esperan al OCR: usan el texto preparado y las mismas reglas. Una captura propia sí pasa por tesseract.js. Si el lector no arranca, la pantalla igual responde y no da luz verde.
 - En SMS, seis mensajes ficticios de Banco Nacional, BCR y BAC (verde, amarillo y rojo). Un toque llena el texto. El SMS no sale del navegador.
 - Reportar un número y volver a consultarlo. Con Turso, el color se queda si recargás. Sin Turso, el inicio avisa que el reporte no sobrevive a un reinicio.
@@ -217,10 +235,10 @@ También se puede instalar Vercel desde la pestaña Apps del repo en Origin. Cad
 
 ## Guion de demo (2 a 3 minutos)
 
-1. **El problema (20 s).** Abrí el inicio. SINPE es inmediato, y la estafa también: chip reciclado al enviar, comprobante falso al recibir, y el «devolveme la plata». Esta herramienta no es el banco.
-2. **Consultar en rojo (25 s).** Entrá a Consultar y tocá `6060 3030`. Mostrá el rojo, los tipos de reporte y el índice. Leé en voz alta el recordatorio: hay que verificar el nombre que muestra el banco antes de confirmar.
+1. **El problema (20 s).** Abrí el inicio, «Protege tu SINPE». SINPE es inmediato, y la estafa también: chip reciclado al enviar, comprobante falso al recibir, y el «devolveme la plata». Stopfy no es el banco.
+2. **Consultar en rojo (25 s).** Entrá a Consultar y tocá `6060 3030`. Mostrá el rojo, los reportes ficticios de la demo y el índice (no es un porcentaje). Leé en voz alta el recordatorio: hay que verificar el nombre que muestra el banco antes de confirmar.
 3. **El verde no es un permiso (20 s).** Consultá `8881 0001` o `5111 9090`. Explicá que verde es «sin alertas en la lista», no «mandá la plata».
-4. **Comprobante que se ve bien (25 s).** En Comprobante, elegí «Se ve consistente» y analizá. Sale verde, con monto, fecha y referencia. Volvé al recordatorio: igual hay que ver el depósito en el banco.
+4. **Comprobante que se ve bien (25 s).** En Comprobante, abrí «Usar comprobante de ejemplo», elegí «Se ve consistente» y analizá. Sale verde, con monto, fecha y referencia. Volvé al recordatorio: igual hay que ver el depósito en el banco.
 5. **La captura mentirosa (30 s).** Elegí «Varias señales raras». Mostrá la fecha imposible, la hora 25:99, los dos montos, los dos bancos y la referencia corta. El semáforo queda en rojo.
 6. **El guion del chat (20 s).** Volvé al comprobante consistente, pegá «Guion de estafa» y analizá de nuevo. La imagen sola era verde; el mensaje la pone en rojo.
 7. **Cerrar el círculo (20 s).** Reportá un número inventado, por ejemplo `7000 1111`, tipo «comprobante falso», con una frase. Consultalo: ya no sale limpio. Cerrá con las limitaciones: datos ficticios, OCR local, sin API key, y el semáforo no reemplaza al banco.
