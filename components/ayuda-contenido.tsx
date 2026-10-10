@@ -45,14 +45,14 @@ export function AyudaContenido({ datos }: { datos: Estadisticas }) {
   const [abierta, setAbierta] = useState<string>(PREGUNTAS[0].id);
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-3xl lg:max-w-4xl">
       <TituloPantalla titulo="Ayuda" texto="Preguntas frecuentes" />
 
-      <div className="mt-5 overflow-hidden rounded-[20px] border border-[#E2E8F0] bg-white">
+      <div className="mt-5 overflow-hidden rounded-[20px] border border-border bg-card">
         {PREGUNTAS.map((item) => {
           const abiertaEsta = abierta === item.id;
           return (
-            <div key={item.id} className="border-b border-[#E2E8F0] last:border-b-0">
+            <div key={item.id} className="border-b border-border last:border-b-0">
               <button
                 type="button"
                 aria-expanded={abiertaEsta}
@@ -60,14 +60,14 @@ export function AyudaContenido({ datos }: { datos: Estadisticas }) {
                 onClick={() => setAbierta(abiertaEsta ? "" : item.id)}
                 className={cn("flex w-full items-center justify-between gap-3 px-4 py-4 text-left", clsFoco)}
               >
-                <span className="text-[15px] font-semibold text-[#0F172A]">{item.pregunta}</span>
+                <span className="text-[15px] font-semibold text-foreground">{item.pregunta}</span>
                 <ChevronDown
-                  className={cn("size-4 shrink-0 text-[#64748B] transition-transform", abiertaEsta && "rotate-180")}
+                  className={cn("size-4 shrink-0 text-muted-foreground transition-transform", abiertaEsta && "rotate-180")}
                   aria-hidden
                 />
               </button>
               {abiertaEsta && (
-                <p id={`respuesta-${item.id}`} className="px-4 pb-4 text-sm leading-relaxed text-[#64748B]">
+                <p id={`respuesta-${item.id}`} className="px-4 pb-4 text-sm leading-relaxed text-muted-foreground">
                   {item.respuesta}
                 </p>
               )}
@@ -81,8 +81,8 @@ export function AyudaContenido({ datos }: { datos: Estadisticas }) {
       </div>
 
       <section className="mt-8 text-center">
-        <h2 className="text-lg font-extrabold tracking-tight text-[#0F172A]">¿Necesitás más ayuda?</h2>
-        <p className="mt-2 text-sm leading-relaxed text-[#64748B]">
+        <h2 className="text-lg font-extrabold tracking-tight text-foreground">¿Necesitás más ayuda?</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           Stopfy no tiene un canal de soporte aparte: es un proyecto de hackathon y no publicamos un correo inventado.
           Si algo no cuadra, el semáforo no reemplaza a tu banco.
         </p>

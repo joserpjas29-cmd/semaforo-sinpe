@@ -35,10 +35,24 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-canvas: var(--canvas);
+  --color-inverse: var(--inverse);
+  --color-inverse-foreground: var(--inverse-foreground);
+  --color-link: var(--link);
+  --color-riesgo-rojo: var(--riesgo-rojo);
+  --color-riesgo-rojo-texto: var(--riesgo-rojo-texto);
+  --color-riesgo-rojo-fondo: var(--riesgo-rojo-fondo);
+  --color-riesgo-amarillo: var(--riesgo-amarillo);
+  --color-riesgo-amarillo-texto: var(--riesgo-amarillo-texto);
+  --color-riesgo-amarillo-fondo: var(--riesgo-amarillo-fondo);
+  --color-riesgo-verde: var(--riesgo-verde);
+  --color-riesgo-verde-texto: var(--riesgo-verde-texto);
+  --color-riesgo-verde-fondo: var(--riesgo-verde-fondo);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -56,21 +70,35 @@
   --popover: #ffffff;
   --popover-foreground: #0f172a;
   --primary: #1d4ed8;
+  --primary-hover: #1e40af;
   --primary-foreground: #ffffff;
   --secondary: #f1f5f9;
   --secondary-foreground: #0f172a;
   --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted-foreground: #475569;
   --accent: #ccfbf1;
-  --accent-foreground: #0d9488;
-  --destructive: #dc2626;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
+  --accent-foreground: #0f766e;
+  --destructive: #991b1b;
+  --border: #64748b;
+  --input: #64748b;
   --ring: #1d4ed8;
+  --link: #1d4ed8;
+  --canvas: #e7edf5;
+  --inverse: #0f172a;
+  --inverse-foreground: #ffffff;
+  --riesgo-rojo: #dc2626;
+  --riesgo-rojo-texto: #991b1b;
+  --riesgo-rojo-fondo: #fee2e2;
+  --riesgo-amarillo: #b45309;
+  --riesgo-amarillo-texto: #92400e;
+  --riesgo-amarillo-fondo: #fef3c7;
+  --riesgo-verde: #15803d;
+  --riesgo-verde-texto: #166534;
+  --riesgo-verde-fondo: #dcfce7;
   --chart-1: #1d4ed8;
-  --chart-2: #0d9488;
-  --chart-3: #64748b;
-  --chart-4: #16a34a;
+  --chart-2: #0f766e;
+  --chart-3: #475569;
+  --chart-4: #15803d;
   --chart-5: #dc2626;
   --radius: 1rem;
   --sidebar: #ffffff;
@@ -79,8 +107,58 @@
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f1f5f9;
   --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #e2e8f0;
+  --sidebar-border: #64748b;
   --sidebar-ring: #1d4ed8;
+  color-scheme: light;
+}
+
+.dark {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --card: #1e293b;
+  --card-foreground: #f8fafc;
+  --popover: #1e293b;
+  --popover-foreground: #f8fafc;
+  --primary: #1d4ed8;
+  --primary-hover: #1e40af;
+  --primary-foreground: #ffffff;
+  --secondary: #334155;
+  --secondary-foreground: #f8fafc;
+  --muted: #334155;
+  --muted-foreground: #cbd5e1;
+  --accent: #134e4a;
+  --accent-foreground: #5eead4;
+  --destructive: #fca5a5;
+  --border: #64748b;
+  --input: #94a3b8;
+  --ring: #93c5fd;
+  --link: #93c5fd;
+  --canvas: #020617;
+  --inverse: #f8fafc;
+  --inverse-foreground: #0f172a;
+  --riesgo-rojo: #f87171;
+  --riesgo-rojo-texto: #fecaca;
+  --riesgo-rojo-fondo: #450a0a;
+  --riesgo-amarillo: #fbbf24;
+  --riesgo-amarillo-texto: #fde68a;
+  --riesgo-amarillo-fondo: #451a03;
+  --riesgo-verde: #4ade80;
+  --riesgo-verde-texto: #bbf7d0;
+  --riesgo-verde-fondo: #052e16;
+  --chart-1: #93c5fd;
+  --chart-2: #5eead4;
+  --chart-3: #cbd5e1;
+  --chart-4: #4ade80;
+  --chart-5: #f87171;
+  --sidebar: #020617;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #1d4ed8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #f8fafc;
+  --sidebar-border: #64748b;
+  --sidebar-ring: #93c5fd;
+  color-scheme: dark;
 }
 
 @layer base {
@@ -89,7 +167,6 @@
   }
   html {
     @apply font-sans;
-    color-scheme: light;
   }
   body {
     @apply bg-background text-foreground;
@@ -98,4 +175,10 @@
 
 ::selection {
   background: #dbeafe;
+  color: #0f172a;
+}
+
+.dark ::selection {
+  background: #1e3a8a;
+  color: #f8fafc;
 }

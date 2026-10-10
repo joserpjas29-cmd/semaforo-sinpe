@@ -28,14 +28,14 @@ export function CampoTelefono({
   return (
     <div
       className={cn(
-        "flex h-14 items-center rounded-[16px] border-2 bg-white px-4",
-        invalido ? "border-[#DC2626]" : tono === "activo" ? "border-[#1D4ED8]" : "border-[#E2E8F0] focus-within:border-[#1D4ED8]",
+        "flex h-14 items-center rounded-[16px] border-2 bg-card px-4",
+        invalido ? "border-destructive" : tono === "activo" ? "border-link" : "border-input focus-within:border-link",
       )}
     >
-      <span className="text-base font-semibold text-[#1D4ED8]" aria-hidden>
+      <span className="text-base font-semibold text-link" aria-hidden>
         +506
       </span>
-      <span className="mx-3 h-6 w-px bg-[#E2E8F0]" aria-hidden />
+      <span className="mx-3 h-6 w-px bg-border" aria-hidden />
       <input
         id={id}
         name="telefono"
@@ -46,7 +46,7 @@ export function CampoTelefono({
         aria-invalid={invalido || undefined}
         aria-describedby={descritoPor}
         onChange={(evento) => onChange(presentarEntrada(evento.target.value))}
-        className="w-full bg-transparent text-lg font-semibold tracking-wide text-[#0F172A] outline-none placeholder:font-medium placeholder:text-[#CBD5E1]"
+        className="w-full bg-transparent text-lg font-semibold tracking-wide text-foreground outline-none placeholder:font-medium placeholder:text-muted-foreground"
       />
     </div>
   );
