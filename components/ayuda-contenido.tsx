@@ -25,7 +25,7 @@ const PREGUNTAS = [
     id: "datos",
     pregunta: "¿Stopfy guarda mis datos?",
     respuesta:
-      "No te pedimos tu número ni tu nombre. El celular que consultás o reportás no se guarda en claro: en el servidor queda un código HMAC. El SMS se revisa en tu navegador y no se envía. El historial de consultas vive solo en este navegador y no incluye el texto del mensaje ni la foto.",
+      "No te pedimos tu número ni tu nombre. El celular que consultás o reportás no se guarda en claro: en el servidor queda un código HMAC. El SMS se revisa en tu navegador y no se envía. El historial de consultas vive solo en este navegador y no incluye el texto del mensaje ni la foto. Si el sello de Stellar está prendido, a la red de pruebas se manda solo un hash del reporte.",
   },
   {
     id: "comprobante",
@@ -38,6 +38,12 @@ const PREGUNTAS = [
     pregunta: "¿Cómo reporto un número?",
     respuesta:
       "En Reportar elegí el tipo: comprobante falso, número reciclado, pidió devolución u otro. Contá en una frase qué pasó, sin cédulas ni cuentas. En la consulta se ven cantidades y tipos, no el texto libre.",
+  },
+  {
+    id: "stellar",
+    pregunta: "¿Qué es el sello de Stellar?",
+    respuesta:
+      "Si está configurado, cada reporte nuevo deja un hash en la red de pruebas de Stellar (testnet), no en la red principal. El hash no incluye el número ni el texto. Sirve para comprobar en el explorador que el reporte existía en ese momento. No prueba que la estafa haya ocurrido. Si no hay cuenta configurada, el reporte se guarda igual y no aparece el sello.",
   },
 ] as const;
 

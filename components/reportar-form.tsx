@@ -8,6 +8,8 @@ import { clsBoton, clsFoco } from "@/components/estilos";
 import { interpretarRespuesta } from "@/lib/mensaje-limite";
 import { formatearTelefono, normalizarTelefono } from "@/lib/telefono";
 import { ETIQUETA_TIPO, TIPOS_REPORTE, type TipoReporte } from "@/lib/tipos";
+import { SelloStellar } from "@/components/sello-stellar";
+import { sellosParaMostrar, type SelloVisible } from "@/lib/sello-vista";
 import { ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +26,7 @@ export function ReportarForm({ numeroInicial = "" }: { numeroInicial?: string })
   const [tipo, setTipo] = useState<TipoReporte | "">("");
   const [descripcion, setDescripcion] = useState("");
   const [error, setError] = useState("");
-  const [exito, setExito] = useState<string | null>(null);
+  const [exito, setExito] = useState<{ telefono: string; sello: SelloVisible | null } | null>(null);
   const [cargando, setCargando] = useState(false);
 
   async function enviar(evento: FormEvent) {
@@ -41,7 +43,10 @@ export function ReportarForm({ numeroInicial = "" }: { numeroInicial?: string })
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ telefono, tipo, descripcion }),
       });
-      const leido = await interpretarRespuesta<{ telefono?: string }>(respuesta, "No se pudo guardar el reporte.");
+      const leido = await interpretarRespuesta<{ telefono?: string; sello?: SelloVisible | null }>(
+        respuesta,
+        "No se pudo guardar el reporte.",
+      );
       if (!leido.ok) {
         setError(leido.error);
         return;
@@ -50,7 +55,8 @@ export function ReportarForm({ numeroInicial = "" }: { numeroInicial?: string })
         setError("No se pudo guardar el reporte.");
         return;
       }
-      setExito(leido.datos.telefono);
+      const sellos = sellosParaMostrar(leido.datos.sello ? [leido.datos.sello] : []);
+      setExito({ telefono: leido.datos.telefono, sello: sellos[0] ?? null });
     } catch {
       setError("No hay conexión con la herramienta. Probá de nuevo.");
     } finally {
@@ -66,10 +72,11 @@ export function ReportarForm({ numeroInicial = "" }: { numeroInicial?: string })
         </span>
         <h1 className="text-[28px] font-extrabold tracking-tight text-foreground">El reporte ya está en la lista</h1>
         <p className="text-[15px] leading-relaxed text-muted-foreground">
-          Quien consulte {formatearTelefono(exito)} va a ver este aviso en el semáforo. No publicamos el texto que
-          escribiste.
+          Quien consulte {formatearTelefono(exito.telefono)} va a ver este aviso en el semáforo. No publicamos el texto
+          que escribiste.
         </p>
-        <Link href={`/consultar?numero=${exito}`} className={clsBoton}>
+        {exito.sello && <SelloStellar sellos={[exito.sello]} />}
+        <Link href={`/consultar?numero=${exito.telefono}`} className={clsBoton}>
           Ver el semáforo de este número
         </Link>
         <button
@@ -96,7 +103,8 @@ export function ReportarForm({ numeroInicial = "" }: { numeroInicial?: string })
         <p className="mt-1">
           No guardamos el número en claro: solo un código HMAC irreversible, que no se puede volver a leer. Guardamos
           el tipo, tu descripción y la hora. No te pedimos nombre, y el reporte no guarda la dirección de tu conexión
-          ni un código de ella. En la consulta pública se ven cantidades y tipos, no el texto libre.
+          ni un código de ella. En la consulta pública se ven cantidades y tipos, no el texto libre. Si el sello de
+          Stellar está activo, a la red de pruebas se publica solo un hash: nunca el número ni lo que escribiste.
         </p>
       </aside>
 

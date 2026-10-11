@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["tesseract.js", "tesseract.js-core", "wasm-feature-detect"],
+  serverExternalPackages: ["tesseract.js", "tesseract.js-core", "wasm-feature-detect", "@stellar/stellar-sdk"],
   // El worker de tesseract se abre por ruta, así que el trazado de Next no lo
   // sigue solo. Sin estos archivos el OCR falla en la función de Vercel.
   outputFileTracingIncludes: {

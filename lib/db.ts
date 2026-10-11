@@ -3,6 +3,8 @@ import { esNumeroDemo } from "./ejemplos";
 import { esperaLegible, reglaLimite } from "./limite";
 import { limitar } from "./limitador";
 import { hashIp, hashTelefono } from "./privacidad";
+import { txEsSello, urlExplorador, type SelloVisible } from "./sello-vista";
+import { sellarReporte } from "./stellar";
 import { formatearTelefono, normalizarTelefono, pareceCelular } from "./telefono";
 import { puntuarNumero } from "./semaforo";
 import {
@@ -23,6 +25,8 @@ export interface ConsultaNumero extends ResultadoNumero {
   esEjemplo: boolean;
   pareceCelular: boolean;
   recordatorio: string;
+  /** Transacciones de testnet de los reportes de este número. Vacío si ninguno se selló. */
+  sellos: SelloVisible[];
 }
 
 export interface Estadisticas {
@@ -56,7 +60,20 @@ export async function consultarNumero(telefono: string, ahora = new Date()): Pro
     esEjemplo: filas.some((fila) => fila.es_ejemplo === 1) || esNumeroDemo(normalizado),
     pareceCelular: pareceCelular(normalizado),
     recordatorio: RECORDATORIO_ENVIO,
+    sellos: sellosDe(filas),
   };
+}
+
+function sellosDe(filas: FilaReporte[]): SelloVisible[] {
+  const vistos = new Set<string>();
+  const sellos: SelloVisible[] = [];
+  for (const fila of filas) {
+    const tx = fila.stellar_tx?.trim().toLowerCase() ?? "";
+    if (!txEsSello(tx) || vistos.has(tx)) continue;
+    vistos.add(tx);
+    sellos.push({ tx, url: urlExplorador(tx) });
+  }
+  return sellos;
 }
 
 export async function obtenerEstadisticas(ahora = new Date()): Promise<Estadisticas> {
@@ -87,7 +104,7 @@ export interface ReporteNuevo {
 }
 
 export type ResultadoReporte =
-  | { ok: true; id: number; telefono: string }
+  | { ok: true; id: number; telefono: string; sello: SelloVisible | null }
   | { ok: false; error: string; codigo: "datos" }
   | { ok: false; error: string; codigo: "limite"; reintentarEnSeg: number };
 
@@ -137,13 +154,23 @@ export async function crearReporte(entrada: ReporteNuevo): Promise<ResultadoRepo
 
   const almacen = await obtenerAlmacen();
   await purgarSiToca(almacen, ahora);
+  const creadoEn = ahora.toISOString();
   const id = await almacen.guardar({
     telefonoHash,
     tipo: entrada.tipo,
     descripcion,
-    creadoEn: ahora.toISOString(),
+    creadoEn,
   });
-  return { ok: true, id, telefono };
+  // El sello es un paso aparte. Si Stellar no está o falla, el reporte igual queda guardado.
+  const sello = await sellarReporte({ telefonoHash, id, creadoEn });
+  if (sello) {
+    try {
+      await almacen.anotarSello(id, sello.tx);
+    } catch (error) {
+      console.error("El reporte quedó sellado en Stellar, pero no pude guardar el hash de la transacción.", error);
+    }
+  }
+  return { ok: true, id, telefono, sello };
 }
 
 const FORMATO_IP = /^[0-9a-fA-F:.]{2,45}$/;

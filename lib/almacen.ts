@@ -2,12 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { REPORTES_EJEMPLO } from "./ejemplos";
 import {
+  COLUMNA_STELLAR_TX,
   COLUMNA_TELEFONO_HASH,
   META_PRIVACIDAD,
   SENTENCIAS_INDICES,
   SENTENCIAS_LIMPIEZA,
   SENTENCIAS_TABLAS,
 } from "./esquema";
+import { txEsSello } from "./sello-vista";
 import { contarEnVentana, DIA_MS, excedeLimite } from "./limite";
 import { hashTelefono, RETENCION_DIAS, validarSecretos } from "./privacidad";
 
@@ -17,6 +19,8 @@ export interface FilaReporte {
   tipo: string;
   creado_en: string;
   es_ejemplo: number;
+  /** Hash de la transacción en la testnet, o null si este reporte no se selló. */
+  stellar_tx: string | null;
 }
 
 export interface Conteos {
@@ -57,6 +61,8 @@ export interface Almacen {
   reportesDe(telefonoHash: string): Promise<FilaReporte[]>;
   conteos(desdeIso: string): Promise<Conteos>;
   guardar(entrada: Guardado): Promise<number>;
+  /** Guarda el hash de la transacción de testnet junto al reporte. No pisa un sello que ya exista. */
+  anotarSello(id: number, tx: string): Promise<void>;
   /**
    * Anota un uso y dice si cabía en el límite. Solo se anotan los usos permitidos:
    * insistir con la puerta cerrada no alarga la espera. Es atómico en SQLite y en Turso.
@@ -181,6 +187,21 @@ export async function migrarPrivacidad(ej: EjecutorMigracion): Promise<boolean> 
   return pendientes.length > 0;
 }
 
+/** Agrega `stellar_tx` en bases que ya existían. En una base nueva la columna ya viene en el CREATE. */
+export async function asegurarSello(ej: Pick<EjecutorMigracion, "columnas" | "ejecutar">): Promise<void> {
+  if ((await ej.columnas()).includes("stellar_tx")) return;
+  try {
+    await ej.ejecutar(COLUMNA_STELLAR_TX);
+  } catch (error) {
+    if (!(await ej.columnas()).includes("stellar_tx")) throw error;
+  }
+}
+
+function selloGuardable(tx: string): string | null {
+  const limpio = tx.trim().toLowerCase();
+  return txEsSello(limpio) ? limpio : null;
+}
+
 export function crearAlmacenMemoria(ahora = Date.now()): Almacen {
   const reportes: {
     id: number;
@@ -189,6 +210,7 @@ export function crearAlmacenMemoria(ahora = Date.now()): Almacen {
     descripcion: string;
     creadoEn: string;
     esEjemplo: boolean;
+    stellarTx: string | null;
   }[] = [];
   const eventos: { accion: string; clave: string; creadoEn: string }[] = [];
   let siguiente = 1;
@@ -200,6 +222,7 @@ export function crearAlmacenMemoria(ahora = Date.now()): Almacen {
       descripcion: fila.descripcion,
       creadoEn: fila.creadoEn,
       esEjemplo: true,
+      stellarTx: null,
     });
     siguiente += 1;
   }
@@ -213,6 +236,7 @@ export function crearAlmacenMemoria(ahora = Date.now()): Almacen {
           tipo: fila.tipo,
           creado_en: fila.creadoEn,
           es_ejemplo: fila.esEjemplo ? 1 : 0,
+          stellar_tx: fila.stellarTx,
         }));
     },
     async conteos(desdeIso) {
@@ -228,8 +252,15 @@ export function crearAlmacenMemoria(ahora = Date.now()): Almacen {
         descripcion: entrada.descripcion,
         creadoEn: entrada.creadoEn,
         esEjemplo: false,
+        stellarTx: null,
       });
       return id;
+    },
+    async anotarSello(id, tx) {
+      const sello = selloGuardable(tx);
+      const fila = reportes.find((reporte) => reporte.id === id);
+      if (!sello || !fila || fila.stellarTx) return;
+      fila.stellarTx = sello;
     },
     async consumirLimite({ accion, clave, maximo, ventanaMs, ahora: instante }) {
       const desde = desdeDe(instante, ventanaMs);
@@ -336,6 +367,7 @@ export async function crearAlmacenSqlite(archivo: string): Promise<Almacen> {
   db.exec("PRAGMA journal_mode = WAL");
   db.exec(`${SENTENCIAS_TABLAS.join(";\n")};`);
   const reescribio = await migrarPrivacidad(ejecutorSqlite(db));
+  await asegurarSello(ejecutorSqlite(db));
   db.exec(`${[...SENTENCIAS_INDICES, ...SENTENCIAS_LIMPIEZA].join(";\n")};`);
   if (reescribio) {
     // Sin esto, los teléfonos en claro seguirían en páginas libres y en el archivo -wal.
@@ -348,7 +380,7 @@ export async function crearAlmacenSqlite(archivo: string): Promise<Almacen> {
     modo: "sqlite",
     async reportesDe(telefonoHash) {
       return db
-        .prepare(`SELECT tipo, creado_en, es_ejemplo FROM reportes WHERE telefono_hash = ?`)
+        .prepare(`SELECT tipo, creado_en, es_ejemplo, stellar_tx FROM reportes WHERE telefono_hash = ?`)
         .all(telefonoHash) as unknown as FilaReporte[];
     },
     async conteos(desdeIso) {
@@ -382,6 +414,11 @@ export async function crearAlmacenSqlite(archivo: string): Promise<Almacen> {
         )
         .run(entrada.telefonoHash, entrada.tipo, entrada.descripcion, entrada.creadoEn);
       return Number(resultado.lastInsertRowid);
+    },
+    async anotarSello(id, tx) {
+      const sello = selloGuardable(tx);
+      if (!sello) return;
+      db.prepare(`UPDATE reportes SET stellar_tx = ? WHERE id = ? AND stellar_tx IS NULL`).run(sello, id);
     },
     async consumirLimite({ accion, clave, maximo, ventanaMs, ahora }) {
       const desde = desdeDe(ahora, ventanaMs);
@@ -469,6 +506,7 @@ async function crearAlmacenTurso(url: string, authToken: string | undefined): Pr
   const cliente = createClient({ url, authToken });
   await cliente.executeMultiple(`${SENTENCIAS_TABLAS.join(";\n")};`);
   await migrarPrivacidad(ejecutorTurso(cliente));
+  await asegurarSello(ejecutorTurso(cliente));
   await cliente.executeMultiple(`${[...SENTENCIAS_INDICES, ...SENTENCIAS_LIMPIEZA].join(";\n")};`);
   const marca = await cliente.execute(`SELECT valor FROM meta WHERE clave = 'semilla'`);
   if (marca.rows.length === 0) {
@@ -487,15 +525,17 @@ async function crearAlmacenTurso(url: string, authToken: string | undefined): Pr
     modo: "turso",
     async reportesDe(telefonoHash) {
       const resultado = await cliente.execute({
-        sql: `SELECT tipo, creado_en, es_ejemplo FROM reportes WHERE telefono_hash = ?`,
+        sql: `SELECT tipo, creado_en, es_ejemplo, stellar_tx FROM reportes WHERE telefono_hash = ?`,
         args: [telefonoHash],
       });
       return resultado.rows.map((fila) => {
         const registro = fila as unknown as Record<string, unknown>;
+        const tx = celda(registro, "stellar_tx").trim().toLowerCase();
         return {
           tipo: celda(registro, "tipo"),
           creado_en: celda(registro, "creado_en"),
           es_ejemplo: Number(registro.es_ejemplo ?? 0),
+          stellar_tx: txEsSello(tx) ? tx : null,
         };
       });
     },
@@ -535,6 +575,14 @@ async function crearAlmacenTurso(url: string, authToken: string | undefined): Pr
         "write",
       );
       return Number(insertado?.lastInsertRowid ?? 0);
+    },
+    async anotarSello(id, tx) {
+      const sello = selloGuardable(tx);
+      if (!sello) return;
+      await cliente.execute({
+        sql: `UPDATE reportes SET stellar_tx = ? WHERE id = ? AND stellar_tx IS NULL`,
+        args: [sello, id],
+      });
     },
     async consumirLimite({ accion, clave, maximo, ventanaMs, ahora }) {
       const desde = desdeDe(ahora, ventanaMs);
