@@ -8,10 +8,12 @@ import { Encabezado } from "@/components/encabezado";
 import { clsBoton, clsEnlace, clsFoco } from "@/components/estilos";
 import { Recordatorio } from "@/components/recordatorio";
 import { ResultadoRiesgo, type LineaResultado } from "@/components/resultado-riesgo";
+import { SelloStellar } from "@/components/sello-stellar";
 import { NUMEROS_DEMO } from "@/lib/ejemplos";
 import { guardarHistorial } from "@/lib/historial-local";
 import { interpretarRespuesta } from "@/lib/mensaje-limite";
 import { formatearTelefono, normalizarTelefono } from "@/lib/telefono";
+import { sellosParaMostrar, type SelloVisible } from "@/lib/sello-vista";
 import { RECORDATORIO_ENVIO, type ResultadoNumero } from "@/lib/tipos";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +23,7 @@ interface Consulta extends ResultadoNumero {
   esEjemplo: boolean;
   pareceCelular: boolean;
   recordatorio: string;
+  sellos?: SelloVisible[];
 }
 
 const LLAMADO = {
@@ -183,6 +186,11 @@ export function ConsultarForm({ numeroInicial = "" }: { numeroInicial?: string }
             resultado.pareceCelular
               ? undefined
               : "Este número no parece celular. SINPE Móvil suele usar uno que empieza con 5, 6, 7 u 8."
+          }
+          extra={
+            sellosParaMostrar(resultado.sellos).length > 0 ? (
+              <SelloStellar sellos={resultado.sellos ?? []} />
+            ) : undefined
           }
           onCerrar={() => setResultado(null)}
           acciones={

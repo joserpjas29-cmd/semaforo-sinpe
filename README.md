@@ -121,6 +121,42 @@ El tope por número evita que alguien inunde de reportes a un mismo celular rota
 - **Bases anteriores:** al abrirse con esta versión, la app calcula los hashes de los teléfonos que ya estaban en claro, vacía la columna vieja y borra los hashes de IP de los reportes. Corre una sola vez. En SQLite local además compacta el archivo para que los números viejos no queden en páginas libres.
 - Como el borrado deja fuera lo de más de 180 días, los dos últimos escalones de recencia del puntaje (hasta un año, y más viejo) solo se aplican a los reportes de demostración.
 
+### Sello en Stellar (red de pruebas)
+
+Cada reporte nuevo puede dejar un hash en la **testnet** de Stellar, con el SDK oficial `@stellar/stellar-sdk`. El hash es el SHA-256 de `stopfy:v1`, el HMAC del teléfono, el id del reporte y la hora. La transacción lleva ese hash en un memo hash y en un dato `stopfy` (ManageData). No va el número, ni la descripción, ni el nombre de nadie.
+
+El sello marca que ese reporte existía en ese momento. No mueve plata y no prueba que la estafa haya ocurrido. Es la red de pruebas, no la red principal. La Stellar Development Foundation puede reiniciar la testnet.
+
+Si faltan `STELLAR_SECRET_KEY` o `STELLAR_NETWORK`, o la red no es `testnet`, el reporte se guarda igual y la pantalla no muestra el indicador. Un fallo de la red tampoco tumba el reporte.
+
+Para crear la cuenta de prueba, en tu máquina (después de `npm install`):
+
+```bash
+node --input-type=module <<'EOF'
+import { Keypair } from "@stellar/stellar-sdk";
+const cuenta = Keypair.random();
+console.log("PUBLIC=" + cuenta.publicKey());
+console.log("STELLAR_SECRET_KEY=" + cuenta.secret());
+EOF
+```
+
+Fondeala con friendbot. Reemplazá `PUBLIC` por la clave pública que imprimió el comando:
+
+```bash
+curl "https://friendbot.stellar.org?addr=PUBLIC"
+```
+
+En `.env.local` (no se sube al repo) o en las variables de Vercel:
+
+```bash
+STELLAR_SECRET_KEY=la-clave-secreta-que-imprimio-el-comando
+STELLAR_NETWORK=testnet
+```
+
+La clave secreta empieza con `S`. No la pegues en el README, en un commit ni en una captura. La pública empieza con `G` y sí se puede compartir.
+
+Cuando un reporte queda sellado, el resultado y la consulta de ese número muestran «Reporte sellado en Stellar» con un enlace a `https://stellar.expert/explorer/testnet/tx/…`. Ahí se ve el memo y el dato `stopfy`. Los números de la demo no tienen sello.
+
 ## Cómo correrlo
 
 Hace falta Node.js 22 (la base local usa `node:sqlite`, que viene con Node).
@@ -170,7 +206,8 @@ En «Usar comprobante de ejemplo» están las tres capturas. Al elegir una, apar
 - Reportes: SQLite local con `node:sqlite` si no hay variables de Turso (`data/semaforo.sqlite`). En Vercel, [Turso](https://turso.tech) por HTTP (`@libsql/client/web`) cuando están `TURSO_DATABASE_URL` y `TURSO_AUTH_TOKEN`. Si en Vercel no hay base, la semilla vive en memoria y la demo abre igual.
 - Rutas de pantalla: `/`, `/consultar`, `/comprobante`, `/sms`, `/reportar`, `/historial`, `/ayuda`.
 - Rutas de API: `POST /api/consultar`, `POST /api/reportar`, `POST /api/analizar`, `GET /api/estadisticas`. El historial no tiene API.
-- La lógica de puntaje (`lib/semaforo.ts`) y las heurísticas (`lib/comprobante.ts`) son funciones puras, cubiertas por Vitest. Un test corre el OCR sobre las tres imágenes. Otro comprueba el texto de respaldo y la semilla en memoria y en SQLite.
+- La lógica de puntaje (`lib/semaforo.ts`) y las heurísticas (`lib/comprobante.ts`) son funciones puras, cubiertas por Vitest. Un test corre el OCR sobre las tres imágenes. Otro comprueba el texto de respaldo y la semilla en memoria y en SQLite. Otro comprueba el hash anónimo del sello y que, sin las variables, el reporte se guarda y no se llama a Stellar.
+- Si `STELLAR_SECRET_KEY` y `STELLAR_NETWORK=testnet` están definidas, cada reporte nuevo publica ese hash en la testnet. El hash de la transacción queda en `reportes.stellar_tx`. En una base que ya existía, la columna se agrega al abrirla.
 - El OCR vive en el servidor (`lib/ocr.ts`). El archivo de idioma español va en el repo. La función de análisis pide hasta 60 segundos. El lector se rinde a los 25 y deja un resultado, no un error 500.
 
 ## Desplegar en Vercel
@@ -208,6 +245,8 @@ La primera vez que la app habla con Turso crea las tablas y carga la semilla fic
 | `VISION_API_KEY` | No | Solo si querés el modelo de visión |
 | `VISION_API_BASE_URL` | No | Por defecto `https://api.openai.com/v1` |
 | `VISION_MODEL` | No | Por defecto `gpt-4o-mini` |
+| `STELLAR_SECRET_KEY` | No | Clave secreta de la cuenta de **testnet**. Sin ella no se sella y la app sigue igual |
+| `STELLAR_NETWORK` | No | Tiene que ser `testnet`. Otro valor se ignora |
 
 6. **Deploy**. Al terminar, Vercel muestra un dominio `*.vercel.app`. Ese es el link para el celular.
 
@@ -236,6 +275,7 @@ También se puede instalar Vercel desde la pestaña Apps del repo en Origin. Cad
 - No hay cuentas de usuario ni moderación humana. Alguien puede ensuciar un número con reportes falsos: hasta 5 por día por número y 10 por hora por conexión.
 - Al migrar una base de Turso que ya tenía teléfonos en claro, los valores viejos pueden seguir en los respaldos del proveedor. Si hay datos reales, valorá crear una base nueva en vez de migrar.
 - La descripción del reporte se guarda, pero no se muestra en la consulta. Igual no escribas cédulas ni cuentas.
+- El sello de Stellar es un hash en la red de pruebas. No es la red principal, no mueve plata y no prueba que la estafa haya ocurrido. Si las variables no están, Stopfy no sella y no muestra el indicador.
 
 ## Guion de demo (2 a 3 minutos)
 

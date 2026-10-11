@@ -14,7 +14,8 @@ export const SENTENCIAS_TABLAS = [
       descripcion TEXT NOT NULL,
       creado_en TEXT NOT NULL,
       ip_hash TEXT,
-      es_ejemplo INTEGER NOT NULL DEFAULT 0
+      es_ejemplo INTEGER NOT NULL DEFAULT 0,
+      stellar_tx TEXT
     )`,
   `CREATE TABLE IF NOT EXISTS eventos_limite (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,4 +44,6 @@ export const SENTENCIAS_LIMPIEZA = [
 ];
 
 export const COLUMNA_TELEFONO_HASH = `ALTER TABLE reportes ADD COLUMN telefono_hash TEXT`;
+/** Hash de la transacción en la testnet de Stellar. Nulo si ese reporte no se selló. */
+export const COLUMNA_STELLAR_TX = `ALTER TABLE reportes ADD COLUMN stellar_tx TEXT`;
 export const META_PRIVACIDAD = "privacidad_v1";
